@@ -10,11 +10,13 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.Properties;
 
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 
 import org.apache.commons.codec.binary.Hex;
+import org.apache.commons.lang.WordUtils;
 import org.apache.http.client.utils.HttpClientUtils;
 
 import otradotra.Market;
@@ -32,7 +34,10 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.concurrent.Phaser;
+import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * Hello world!
@@ -64,9 +69,17 @@ public class BTC_e {
 	// change says if cache-ing is well performed for this market data (cycles
 	// of solver)) Market solver
 
+	
+	// multithreading options
 	private static boolean cache;
-	private static boolean dataTransferError;
+	private static AtomicBoolean dataTransferError;
 
+	private static Phaser phaserBlockMainThread;
+	private static AtomicBoolean blockWorkerThreadsAtLoopEnd;
+	private static ExecutorService executor;
+	private static boolean multiThreadingSetup;
+	private static AtomicBoolean mainThreadWait;
+	
 	public static void main(String[] args) throws InterruptedException {
 		// 0. Market connection data
 		_key = "FLSE6TVR-4JDIPJB8-S7WH5EZ6-HDFNXFXG-RR1FYGEG";
@@ -81,10 +94,35 @@ public class BTC_e {
 		// myactive orders
 		// System.out.println(authenticatedHTTPRequest("ActiveOrders",
 		// arguments));
+		
+		
+		
 
 		// init setup
 		setup();
+		
+		// tuning java
+				Properties props = System.getProperties();
+				props.setProperty("http.keepAlive", "true");
+				//props.setProperty("http.maxConnections", allMarkets.length+"" );
+				props.setProperty("http.maxConnections", "256" );
+				
+		// multithreading
+		 phaserBlockMainThread = new Phaser();
+		 blockWorkerThreadsAtLoopEnd = new AtomicBoolean();
+		 executor = Executors.newFixedThreadPool(allMarkets.length);
 
+		 dataTransferError = new AtomicBoolean();
+		 mainThreadWait = new AtomicBoolean();
+		 
+		 
+		 // do setup run 
+		 multiThreadingSetup = true;
+		 getDataFromInternet();
+		 multiThreadingSetup = false;
+
+
+		 
 		// set reporter mappings
 
 		double profit = 0;
@@ -309,22 +347,48 @@ public class BTC_e {
 		}// end iteration of cycleNumber
 	}
 
-	public static void getDataFromInternet() {
+	public static void getDataFromInternet() throws InterruptedException {
 
 		// 2. Get stream threadpool market executive - try to get consistent
 		// data (important-> thread execution!!)
 		// number of threads == number of markets
-		ExecutorService executor = Executors
-				.newFixedThreadPool(allMarkets.length);
+		
 		// ExecutorService executor = Executors.newCachedThreadPool();
+		
+		phaserBlockMainThread = new Phaser();
+		phaserBlockMainThread.register(); // register self (main thread)
 
+		
+			
+		dataTransferError.set(false);
+		
+		blockWorkerThreadsAtLoopEnd.set(false); // unblock all threads at the end **** (awaitAdvance(1))
+
+		mainThreadWait.set(true);
+		
 		long nanos = System.nanoTime();
-		dataTransferError = false;
+		
+		if(multiThreadingSetup){
 		for (int i = 0; i < allMarkets.length; i++) {
 			// put matrix addresses
 			final int trans = i;
+
 			executor.execute(new Runnable() {
 				public void run() {
+					
+					while(true){
+						
+					if(multiThreadingSetup){
+						Thread t = Thread.currentThread();
+						t.setPriority(Thread.MAX_PRIORITY);
+						Thread.yield();
+					}
+
+						
+					// if not setup then do normal 
+					phaserBlockMainThread.register(); // register task
+					if(mainThreadWait.get())mainThreadWait.set(false);// send unblocking for main
+
 					// System.out.println("Thread executing " + trans);
 					// solverData.clone();
 					// ask/bid
@@ -334,6 +398,9 @@ public class BTC_e {
 					try {
 						marketTemp = connector[trans].parseBTCeOrders(
 								allMarkets[trans].url, allMarkets[trans].bid);
+						
+						blockWorkerThreadsAtLoopEnd.set(true); // unblock all threads at the end **** (awaitAdvance(1))
+
 						solverData[keyMapping.get(marketTemp[0].getTo())][keyMapping
 								.get(marketTemp[0].getFrom())] = marketTemp[0];
 						solverData[keyMapping.get(marketTemp[1].getTo())][keyMapping
@@ -354,25 +421,45 @@ public class BTC_e {
 					} catch (Exception e) {
 						cache = false; // if one thread fails do
 										// MarketProblemCycle again
-						dataTransferError = true;
+						dataTransferError.set(true);
 					}
 					
 					marketTemp = null;
 
+					phaserBlockMainThread.arrive(); // say main thread finished
+					
 					// System.out.println("--> Thread ending " + trans);
-
+					while(blockWorkerThreadsAtLoopEnd.get()){
+						try {
+							Thread.sleep(20);
+						} catch (InterruptedException e) {
+							// TODO Auto-generated catch block
+							e.printStackTrace();
+						}
+					}
+					//phaserBlockWorkerThreads.register();
+					
+				
+					}
 				}
 			});
 
 			// Runnable worker = new WorkerThread('' + i);
 			// executor.execute(worker);
 		}
+		}
 		// classical shutdown 
-		executor.shutdown();
+		/*executor.shutdown();
 		while (!executor.isTerminated()) {
 			
 		}
+		*/
 		
+		while(mainThreadWait.get()){Thread.sleep(151);}; // wait for register 
+		//wait for motherfuckers
+		phaserBlockMainThread.arriveAndAwaitAdvance(); 
+		//phaserBlockMainThread.(); // register self (main thread)
+
 		
 		
 		/*try {
@@ -390,8 +477,8 @@ public class BTC_e {
 		
 
 		// try again TODO: test this thing 
-		if (dataTransferError) {
-			getDataFromInternet();
+		if (dataTransferError.get()) {
+			//getDataFromInternet();
 		}
 
 		long duration = System.nanoTime() - nanos;

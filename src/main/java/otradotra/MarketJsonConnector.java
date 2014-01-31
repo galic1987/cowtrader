@@ -1,7 +1,16 @@
 package otradotra;
 
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.net.HttpURLConnection;
+import java.net.MalformedURLException;
+import java.net.ProtocolException;
+import java.net.URL;
 import java.util.Date;
 import java.util.List;
+import java.util.Map;
+import java.util.Scanner;
 
 import otradotra.helper.HttpUtils;
 import net.sf.json.JSONArray;
@@ -9,6 +18,11 @@ import net.sf.json.JSONException;
 import net.sf.json.JSONObject;
 
 public class MarketJsonConnector {
+	
+    URL requestURL;
+    HttpURLConnection connection = null;
+
+	
 	
 	int maxNumberOfOrders = 10;
 	final Market [] markets;
@@ -34,6 +48,8 @@ public MarketJsonConnector(String from, String to) {
 	    markets[1].setFrom(to); //### inverse
 	    markets[1].setTo(from);//### inverse
 	    markets[1].setMarketName(to+"_"+from);
+	    
+	    
 
 		// TODO Auto-generated constructor stub
 	}
@@ -43,13 +59,23 @@ public Market[] parseBTCeOrders(String url, String name){
 	// create markets
   //  String[]name1 = name.split("_");
     
+//	long nanos = System.nanoTime();
+	
     // time fast
     markets[0].setGotRequestFromServerDate(new Date());
     markets[1].setGotRequestFromServerDate(new Date());    
     
-    String requestResult = HttpUtils.httpGet(url);
-
-
+    //String requestResult = HttpUtils.httpGet(url);
+    String requestResult = this.httpGet(url);
+    
+    
+//    long duration = System.nanoTime() - nanos;
+//	int seconds = (int) (duration / 1000000000);
+//	int milliseconds = (int) (duration / 1000000) % 1000;
+//	int nanoseconds = (int) (duration % 1000000);
+//	System.out
+//			.printf(markets[0].getMarketName()+" Internet Time: %d seconds, %d milliseconds en %d nanoseconds\n",
+//					seconds, milliseconds, nanoseconds);
 
     try {
         // Convert the HTTP request return value to JSON to parse further.
@@ -125,5 +151,84 @@ public Market parse(Market mark, JSONArray data){
     
     return mark;
 }
+
+
+
+public String httpGet( String url ) {
+    String agent = "Mozilla/4.0";  // Bitstamp seems to require this as an example.
+    BufferedReader reader;
+    String currentLine;
+    StringBuffer result = new StringBuffer();
+
+    // Check, if we should trust all SSL certs and enable the fix if necessary.
+   /* if( TRUST_ALL_SSL_CERTS && ( _trustAllCerts == null)) {
+        installAllCertsTruster();
+    }*/
+
+    try {
+    	requestURL = new URL( url);
+       
+        connection = (HttpURLConnection)requestURL.openConnection();
+        connection.setUseCaches(false);
+        
+
+    } catch( MalformedURLException me) {
+        System.err.println( "URL format error: " + url);
+
+        return null;
+    }catch( IOException ioe) {
+        System.err.println( "Cannot open URL: " + url);
+
+        return null;
+    }
+
+   
+
+    connection.setRequestProperty( "User-Agent", agent );
+   
+    // Add the additional headerlines, if there were any given.
+   /* if( headerlines != null) {
+        for( Map.Entry<String, String> entry : headerlines.entrySet()) {
+            connection.setRequestProperty( entry.getKey(), entry.getValue());
+        }
+    }
+    */
+     
+    try {
+        connection.setRequestMethod("GET");
+
+        reader = new BufferedReader( new InputStreamReader( connection.getInputStream()));
+
+        while( ( currentLine = reader.readLine()) != null) {
+            result.append( currentLine);
+        }
+        reader.close();
+
+    } catch( ProtocolException pe) {
+        System.err.println( "Wrong protocol for URL: " + pe.toString());
+
+        result = null;  // return null
+
+    }  catch( IOException ioe) {
+
+        System.err.println( "I/O error while reading from URL: " + url + "\n" + ioe.toString());
+
+        Scanner scanner = new Scanner( connection.getErrorStream());  // Get a stream for the error message.
+
+        scanner.useDelimiter("\\Z");
+
+        String response = scanner.next();  // Get the error message as text.
+
+        System.out.println( "DEBUG: Server error: " + response);
+
+        result = null;  // return null
+    } finally {
+        if( connection != null) {
+            //connection.disconnect();
+        }
+    }
+
+    return result != null ? result.toString() : null;
+ }
 	
 }
