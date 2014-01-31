@@ -4,7 +4,9 @@ package test_choco;
 
 
 import java.math.BigDecimal;
+import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
 
 import models.Order;
 
@@ -42,6 +44,7 @@ import solver.constraints.real.RealConstraint;
 import solver.constraints.set.SetConstraintsFactory;
 import solver.objective.ObjectiveStrategy;
 import solver.objective.OptimizationPolicy;
+import solver.search.loop.monitors.IMonitorSolution;
 import solver.search.loop.monitors.SMF;
 import solver.search.solution.LastSolutionRecorder;
 import solver.search.solution.Solution;
@@ -64,14 +67,13 @@ import util.objects.setDataStructures.SetFactory;
 
 public class MarketProblem extends AbstractProblem  {
 
-	double precision = 1.0e-3;
+	int maxNumberOfSolutions = 1000; // affects memory places for array
 
 
-    double low;
     // graph variable
     private DirectedGraphVar tc;  
-	IntVar nbArcs;
-	IntVar nbNodes;
+    private IntVar nbArcs;
+    private IntVar nbNodes;
 
     
     //############# static 
@@ -86,26 +88,41 @@ public class MarketProblem extends AbstractProblem  {
     
     
     //#dynamic calculation
-    private double[] price;
+    private Map <Integer,Integer> [] solutions;
+    private int numberOfSolutions  = 0;
 
-    
     
     public MarketProblem(
     		Market[][]solverdata,
     		Map <Integer,String> valueMapping, 
     		Map <String,Integer> keyMapping,
     		Map <Integer,Double> resources,
-    		int n,
-    		double low) {
+    		int n
+    		) {
     	market = solverdata;
     	this.valueMapping = valueMapping;
     	this.keyMapping = keyMapping;
     	this.resources = resources;
     	this.n = n;
-    	this.low = low;
     }
 
-    @Override
+    public Map<Integer, Integer>[] getSolutions() {
+		return solutions;
+	}
+
+	public void setSolutions(Map<Integer, Integer>[] solutions) {
+		this.solutions = solutions;
+	}
+
+	public int getNumberOfSolutions() {
+		return numberOfSolutions;
+	}
+
+	public void setNumberOfSolutions(int numberOfSolutions) {
+		this.numberOfSolutions = numberOfSolutions;
+	}
+
+	@Override
     public void createSolver() {
         solver = new Solver("MarketProblem");
     }
@@ -115,8 +132,9 @@ public class MarketProblem extends AbstractProblem  {
          
     	// 1. make calculation array (where to buy and sell)
        // calculation = VariableFactory.realArray("calculation", n, Double.NEGATIVE_INFINITY, Double.POSITIVE_INFINITY, precision, solver);
-        price = new double[market.length];
         
+    	
+    	
         // 2. make directed graph
         tc = VariableFactory.directedGraph("marketGraph", n, solver);
 		for (int i = 0; i < n; i++) {
@@ -160,13 +178,12 @@ public class MarketProblem extends AbstractProblem  {
         
         solver.post(gc);
         
-        solver.post(new Constraint("makreti",new PropMarketsEvalObj(tc, market,valueMapping,resources)));
+        //solver.post(new Constraint("makreti",new PropMarketsEvalObj(tc, market,valueMapping,resources)));
         
        // VF.eq
 
         
         // 3.5 redundant optimality constraint calculation needs to be 0 or positive everywhere
-       if(true)return;
         
 
      
@@ -183,7 +200,47 @@ public class MarketProblem extends AbstractProblem  {
 
     @Override
     public void solve() {
-        solver.findAllSolutions();
+    	
+    	
+    	
+    	final Map<Integer, Integer>[] myArray = (Map<Integer, Integer>[]) new Map[1000];
+    	
+    	solver.getSearchLoop().plugSearchMonitor(new IMonitorSolution() {
+			public void onSolution() {
+				
+				
+				
+				// make hashmap
+		    	Map <Integer,Integer> nodeMapping  = new HashMap <Integer,Integer> (); //list of nodes 
+		    	ISet act1 = tc.getKernelGraph().getActiveNodes();
+		        for (int i = act1.getFirstElement(); i >= 0; i = act1.getNextElement()) {
+		        	
+		        	ISet arcs = tc.getKernelGraph().getSuccessorsOf(i);
+		        	for (int j = arcs.getFirstElement(); j >= 0; j = arcs.getNextElement()) {
+		        		nodeMapping.put(i, j);
+		        	}
+		        }
+		        
+		        myArray[numberOfSolutions] = nodeMapping;
+		        
+				numberOfSolutions++;
+
+		        
+			}
+		});
+    	
+    	
+    	solver.findAllSolutions();
+    	
+    	// cache the cycles 
+    	solutions = (Map<Integer, Integer>[]) new Map[numberOfSolutions];
+    	
+    	for(int i=0;i<numberOfSolutions;i++){
+    		solutions[i] =  myArray[i];
+    	}
+    	
+        
+        // get all soulutions
         
         //SMF.log(solver, true, false);
 
@@ -196,8 +253,13 @@ public class MarketProblem extends AbstractProblem  {
         //solver.findSolution();
         //solver.getIbex().release();
 		//solver.getIbex().release();
+    	
+    	//solver.findAllSolutions();
+
 
     }
+    
+
 
     @Override
     public void prettyOut() {
@@ -219,7 +281,7 @@ public class MarketProblem extends AbstractProblem  {
     }
     
     public void start(){
-    	this.execute("-log","QUIET");
+    	this.execute("-log","SILENT", "-ee", "NONE");
     }
 
     

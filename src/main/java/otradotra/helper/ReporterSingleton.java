@@ -4,21 +4,40 @@ import java.util.HashMap;
 import java.util.Map;
 
 import otradotra.Market;
+import otradotra.MarketType;
+import test_choco.CalculateOptimalVolumeProblem;
+import test_choco.MarketProblem;
 
 
 public class ReporterSingleton {
 	   private static ReporterSingleton instance = null;
 	   
 	   
+	   // external configuration - this is used to balance everything in this one
+	   public static String balancingCurrency = "usd";
+	   
+	   
+	   //**************** REMOVE THIS FROM HERE
+	   public static Map <Integer,Double> resources;
+	   
+	   
+	   // static  on start change
+	   public static Map <Integer,String> valueMapping; // node(n) -> resource
+	   public static Map <String,Integer> keyMapping; // resource -> node(n)  
+
+	   
+	   // dynamic on solution change
 	   public static int numberOfSoultions = 0;
 	   public static double highestValue = 0;
+	   public static double roundhighestValueBalancingCurrency = 0;
 	   public static double totalValue = 0;
 	   public static Map <Integer,SolutionEvaluator> snapShot = new HashMap <Integer,SolutionEvaluator> ();
 	   
-	   // prazniti 
-	   public static double roundDown = -10;
+	   
+	   // on round change 
+	   public static double roundHigh = -10;
 	   public static Map <Integer,Integer> roundAround = new HashMap <Integer,Integer> ();
-	   public static String roundValuta;
+	   public static String roundCurrency;
 	   
 	   
 	   protected ReporterSingleton() {
@@ -31,25 +50,78 @@ public class ReporterSingleton {
 	      return instance;
 	   }
 	   
-	   public static void newSolution(double value, String valuta, Market[][]m, Map <Integer,Integer> nodeMapping){
+	   public static void newSolution(double value, String currency, Market[][]m, Map <Integer,Integer> nodeMapping){
+		   
+		  
 		   if(value!=ReporterSingleton.highestValue){
-			   snapShot.put(numberOfSoultions, new SolutionEvaluator(value, valuta, nodeMapping, m));
+			   snapShot.put(numberOfSoultions, new SolutionEvaluator(value, currency, nodeMapping, m));
 			   ReporterSingleton.numberOfSoultions++;
 			   ReporterSingleton.totalValue += value;
 		   }	
+		   
 		   if(value>ReporterSingleton.highestValue){
 			   ReporterSingleton.highestValue = value;
 		   }
 		   
 	   }
 	   
-	   public static void downRound(double value,Map <Integer,Integer> roundAround,String roundValuta){
-		   if(value>ReporterSingleton.roundDown){
-			   ReporterSingleton.roundDown = value;
+	   public static void highRound(double value,String currency,Map <Integer,Integer> roundAround,Market[][]m){
+		   
+		   double currentHighest = ReporterSingleton.getValue(roundCurrency, roundHigh, balancingCurrency, m, keyMapping);
+		   double tryHighest = ReporterSingleton.getValue(currency, value, balancingCurrency, m, keyMapping);
+
+		  /* System.out.println("##currentHighest "+roundHigh + " " + ReporterSingleton.roundCurrency);
+		   System.out.println("##tryHighest "+value + " " + currency);
+		   System.out.println("-currentHighest "+currentHighest + " " + balancingCurrencyValue);
+		   System.out.println("-tryHighest "+tryHighest + " " + balancingCurrencyValue);
+*/
+		   if(tryHighest>currentHighest){
+			   ReporterSingleton.roundHigh = value; 
 			   ReporterSingleton.roundAround = roundAround;
-			   ReporterSingleton.roundValuta = roundValuta;
+			   ReporterSingleton.roundCurrency = currency;
+			   ReporterSingleton.roundhighestValueBalancingCurrency = tryHighest;
+			   
+			   
+			  //CalculateOptimalVolumeProblem problem = new CalculateOptimalVolumeProblem(m, value, currency, roundAround, roundAround.size(), valueMapping, resources);
+			  //problem.start();
+			   
 		   }
 	   }
+	   
+	   // returns 0 if no direct connection to that currency
+	   // returns amount on from==to
+	   public static double getValue(
+			   String fromCurrency, 
+			   double amount,
+			   String toCurrency, 
+			   Market[][]m, 
+			   Map<String,Integer> keyMapp){
+		   
+		   // if you try to change from to the same
+		   if(fromCurrency.equals(toCurrency)) return amount;
+
+		   // if there is that market at all
+		   if(m[keyMapp.get(fromCurrency)][keyMapp.get(toCurrency)] != null){
+			   Market market = m[keyMapp.get(fromCurrency)][keyMapp.get(toCurrency)];
+			   if(market.getType() == MarketType.BID){
+				// BID 		   if(amount == 0) return -1;
+				   return market.getOrders()[0].price * amount -(market.getOrders()[0].price * amount*market.getTransactionFee());
+			   }else{
+				   // ASK
+				   return amount / market.getOrders()[0].price -(amount / market.getOrders()[0].price*market.getTransactionFee());
+
+			   }
+		   }else{
+			   // null error
+			   
+			   return -1;
+
+		   }
+		   
+	   }
+	   
+	   
+	   
 	   
 	   
 	   

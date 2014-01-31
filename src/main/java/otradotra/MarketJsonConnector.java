@@ -10,8 +10,8 @@ import net.sf.json.JSONObject;
 
 public class MarketJsonConnector {
 	
-	
-	Market [] markets;
+	int maxNumberOfOrders = 10;
+	final Market [] markets;
 
 	// constructor is final
 public MarketJsonConnector(String from, String to) {
@@ -69,6 +69,9 @@ public Market[] parseBTCeOrders(String url, String name){
             markets[1] = this.parse(markets[1], bid);
             markets[1].setDate(new Date());
 
+            jsonResult = null;
+            requestResult = null;
+            
             // alles klar
             return markets;
 
@@ -78,6 +81,7 @@ public Market[] parseBTCeOrders(String url, String name){
         return null;  // An error occured...
     }
     
+    
 	// parse JsonData
 	// return 
 	//return null;
@@ -85,7 +89,8 @@ public Market[] parseBTCeOrders(String url, String name){
 
 @SuppressWarnings("unchecked")
 public Market parse(Market mark, JSONArray data){
-	mark.orders = new MarketOrder[data.size()];
+	//mark.orders = new MarketOrder[data.size()];
+	mark.orders = new MarketOrder[maxNumberOfOrders];
     int it = 0;
     for (Object iterable_element : data) {
     	MarketOrder m = new MarketOrder();
@@ -109,11 +114,14 @@ public Market parse(Market mark, JSONArray data){
     				m.volume = number.doubleValue();
     			}    		}
     	}
-    	m.total = m.price * m.volume;
+    	// TODO: total is nothing
+    	//m.total = m.price * m.volume;
     	//System.out.println("total = "+ m.total +" = " + m.price + "*" + m.volume);
     	mark.orders[it] = m;
     	it++;
+    	if(it==maxNumberOfOrders)break;
     }
+    data = null;
     
     return mark;
 }

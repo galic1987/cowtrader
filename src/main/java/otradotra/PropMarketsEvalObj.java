@@ -215,6 +215,7 @@ return;
 					
                 	for(int i=0;i<calc.length;i++){
                 		if(calc[i]>0)ReporterSingleton.newSolution(calc[i], valueMapping.get(i), market, nodeMapping);
+                		
                 		//System.out.print(valueMapping.get(i)+":"+new BigDecimal(calc[i]).toString());
                 		//System.out.println("");
                 		//if(calc[i]<lowest_diff) lowest_diff = calc[i];
@@ -228,7 +229,9 @@ return;
         
         for(int gg=0;gg<calc.length;gg++){
     		//System.out.print(valueMapping.get(gg)+":"+new BigDecimal(calc[gg]).toString()+" ");
-    		if(calc[gg]!=0)ReporterSingleton.downRound(calc[gg],nodeMapping,valueMapping.get(gg));
+    		if(calc[gg]!=0)ReporterSingleton.highRound(calc[gg],valueMapping.get(gg),nodeMapping,market);
+    		
+    		
     	}
 		//System.out.println("");
         
