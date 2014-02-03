@@ -1,43 +1,36 @@
 package test_choco;
 
-import java.awt.font.NumericShaper;
 import java.io.UnsupportedEncodingException;
 import java.math.BigDecimal;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
-import java.security.SecureRandom;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Properties;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Phaser;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicLong;
 
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 
-import org.apache.commons.codec.binary.Hex;
-import org.apache.commons.lang.WordUtils;
-import org.apache.http.client.utils.HttpClientUtils;
-
-import otradotra.Market;
-import otradotra.MarketJsonConnector;
-import otradotra.MarketOrder;
-import otradotra.MarketType;
-import otradotra.helper.HttpUtils;
-import otradotra.helper.MarketNameHelper;
-import otradotra.helper.ReporterSingleton;
-import otradotra.helper.SolutionEvaluator;
 import net.sf.json.JSONException;
 import net.sf.json.JSONObject;
 
-import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
-import java.util.concurrent.Phaser;
-import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
+import org.apache.commons.codec.binary.Hex;
+
+import otradotra.Market;
+import otradotra.MarketJsonConnector;
+import otradotra.MarketType;
+import otradotra.helper.ExplanationSingleton;
+import otradotra.helper.HttpUtils;
+import otradotra.helper.MarketNameHelper;
+import otradotra.helper.NetworkOptimizatorSingleton;
+import otradotra.helper.ReporterSingleton;
 
 /**
  * Hello world!
@@ -79,8 +72,15 @@ public class BTC_e {
 	private static ExecutorService executor;
 	private static boolean multiThreadingSetup;
 	private static AtomicBoolean mainThreadWait;
+	private static CountDownLatch mainToOtherThreads;
+	
+	
+	
+	
 	
 	public static void main(String[] args) throws InterruptedException {
+		
+		
 		// 0. Market connection data
 		_key = "FLSE6TVR-4JDIPJB8-S7WH5EZ6-HDFNXFXG-RR1FYGEG";
 		_secret = "00fe262a56e0225d9b50c197e62556ef39a0d1f0ba3f81b814c45af962d0c9f3";
@@ -100,6 +100,7 @@ public class BTC_e {
 
 		// init setup
 		setup();
+		NetworkOptimizatorSingleton.getInstance();
 		
 		// tuning java
 				Properties props = System.getProperties();
@@ -114,7 +115,7 @@ public class BTC_e {
 
 		 dataTransferError = new AtomicBoolean();
 		 mainThreadWait = new AtomicBoolean();
-		 
+		mainToOtherThreads = new CountDownLatch(allMarkets.length + 1);
 		 
 		 // do setup run 
 		 multiThreadingSetup = true;
@@ -137,6 +138,9 @@ public class BTC_e {
 			ReporterSingleton.roundHigh = -10; // reset the round settings
 			ReporterSingleton.roundAround = null;
 			ReporterSingleton.roundCurrency = "usd";
+			
+			// 
+			
 
 			// lets execute multithreading (get data from internet)
 
@@ -157,6 +161,12 @@ public class BTC_e {
 			cache = true;
 			// otherwise just proceed with activites
 			tryCyclesEvaluation();
+			
+			// here come heuristics 
+			ReporterSingleton.printInvolvedCount();
+			ReporterSingleton.resetInvolvedCounter();
+			
+			
 
 			System.out.println("Total # of solutions "
 					+ ReporterSingleton.numberOfSoultions);
@@ -200,6 +210,9 @@ public class BTC_e {
 						keyMapping, resources);
 				problem.start();
 			}
+			
+			//System.out.println(
+			//		NetworkOptimizatorSingleton.getPool().getTotalStats());
 
 			// Thread.sleep(100);
 			// printNice();
@@ -209,6 +222,7 @@ public class BTC_e {
 	}
 
 	public static void tryCyclesEvaluation() {
+		boolean explain = true;
 
 		double[] calc = new double[solverData.length];
 		double[] kol = new double[solverData.length];
@@ -218,12 +232,20 @@ public class BTC_e {
 			calc[i] = 0;
 			kol[i] = 0;
 		}
+		
+		// count number of most involved nodes
+			//Map<Integer, Integer> numberOfOccurences [] = new (Map<Integer, Integer> nodeMapping)[10];
+		
 		// go throught cycle
 		for (int cycleNumber = 0; cycleNumber < problem.getNumberOfSolutions(); cycleNumber++) {
+			StringBuffer explanator = null;
+			
 			Map<Integer, Integer> nodeMapping = problem.getSolutions()[cycleNumber];
-
 			Iterator it = nodeMapping.entrySet().iterator();
 			while (it.hasNext()) {
+				explanator = new StringBuffer();
+				explanator.append("############ ");
+
 				Map.Entry pairs = (Map.Entry) it.next();
 				// go throught full cycle beginning with actual node
 				int actualNode = (Integer) pairs.getKey();
@@ -238,19 +260,50 @@ public class BTC_e {
 					// .. do here the calculation
 					// System.out.println(i+"->"+j);
 					Market m = solverData[i][j];
-					// last calculation
+					//  calculation
 					if (calc[i] == 0) {
 						// System.out.println(m.type);
-
+						
+						// head explanation
+						if(explain){
+							explanator.append("("+m.getType()+")First buy with volumen "+volumina+"  ("+valueMapping.get(i)+")->("+valueMapping.get(j)+")\n");
+						}
 						double tempBuy = 0;
 						if (m.getType() == MarketType.BID) {
 							tempBuy = (m.getOrders()[0].price * volumina)
 									- (m.getOrders()[0].price * volumina * m
 											.getTransactionFee());
+							if(explain){
+								// formula explanation
+								explanator.append("calculation("+valueMapping.get(j)+") = (price("+valueMapping.get(j)+")*volumen("+valueMapping.get(i)+")) -"
+										+ "((price("+valueMapping.get(j)+") *volumen("+valueMapping.get(i)+") * fee("+m.getMarketName()+"))\n");
+								// concrete numbers
+								explanator.append("calculation("+valueMapping.get(j)+") = ("+m.getOrders()[0].price+"("+valueMapping.get(j)+") * "+volumina+"("+valueMapping.get(i)+")) -"
+										+ "(("+m.getOrders()[0].price+"("+valueMapping.get(j)+") *"+volumina+"("+valueMapping.get(i)+")) * "+m.getTransactionFee()+"("+m.getMarketName()+"))\n");
+								// concrete number at the end
+								explanator.append("Bought volume("+valueMapping.get(j)+") = "+tempBuy);
+								explanator.append("\n");
+								explanator.append(ExplanationSingleton.lastNOrdersFromMarket(5, m));
+
+							}
 						} else {
 							tempBuy = (volumina / m.getOrders()[0].price)
 									- ((volumina / m.getOrders()[0].price) * m
 											.getTransactionFee());
+							
+							if(explain){
+								// formula explanation
+							explanator.append("calculation("+valueMapping.get(j)+") = (volumen("+valueMapping.get(i)+") / price("+valueMapping.get(j)+")) -"
+									+ "((volumen("+valueMapping.get(i)+") / price("+valueMapping.get(j)+")) * fee("+m.getMarketName()+"))\n");
+							// concrete numbers
+							explanator.append("calculation("+valueMapping.get(j)+") = ("+volumina+"("+valueMapping.get(i)+") / "+m.getOrders()[0].price+"("+valueMapping.get(j)+")) -"
+									+ "(("+volumina+"("+valueMapping.get(i)+") / "+m.getOrders()[0].price+"("+valueMapping.get(j)+")) * "+m.getTransactionFee()+"("+m.getMarketName()+"))\n");
+							// concrete number at the end
+							explanator.append("Bought volume("+valueMapping.get(j)+") = "+tempBuy+"\n");
+							explanator.append(ExplanationSingleton.lastNOrdersFromMarket(5, m));
+
+							}
+							
 						}
 
 						calc[j] += tempBuy;
@@ -262,14 +315,44 @@ public class BTC_e {
 
 					} else {
 						double tempBuy = 0;
+						
+						if(explain)explanator.append("("+m.getType()+") buy with volumen "+calc[i]+"  ("+valueMapping.get(i)+")->("+valueMapping.get(j)+")\n");
+
 						if (m.getType() == MarketType.BID) {
 							tempBuy = (m.getOrders()[0].price * calc[i])
 									- (m.getOrders()[0].price * calc[i] * m
 											.getTransactionFee());
+							if(explain){
+								// formula explanation
+							explanator.append("calculation("+valueMapping.get(j)+") = (price("+valueMapping.get(j)+")*volumen("+valueMapping.get(i)+")) -"
+									+ "((price("+valueMapping.get(j)+") *volumen("+valueMapping.get(i)+") * fee("+m.getMarketName()+"))\n");
+							// concrete numbers
+							explanator.append("calculation("+valueMapping.get(j)+") = ("+m.getOrders()[0].price+"("+valueMapping.get(j)+") * "+calc[i]+"("+valueMapping.get(i)+")) -"
+									+ "(("+m.getOrders()[0].price+"("+valueMapping.get(j)+") *"+calc[i]+"("+valueMapping.get(i)+")) * "+m.getTransactionFee()+"("+m.getMarketName()+"))\n");
+							// concrete number at the end
+							explanator.append("Bought volume("+valueMapping.get(j)+") = "+tempBuy);
+							explanator.append("\n");
+							explanator.append(ExplanationSingleton.lastNOrdersFromMarket(5, m));
+
+							}
 						} else {
 							tempBuy = (calc[i] / m.getOrders()[0].price)
 									- ((calc[i] / m.getOrders()[0].price) * m
 											.getTransactionFee());
+							
+							if(explain){
+								// formula explanation
+							explanator.append("calculation("+valueMapping.get(j)+") = (volumen("+valueMapping.get(i)+") / price("+valueMapping.get(j)+")) -"
+									+ "((volumen("+valueMapping.get(i)+") / price("+valueMapping.get(j)+")) * fee("+m.getMarketName()+"))\n");
+							// concrete numbers
+							explanator.append("calculation("+valueMapping.get(j)+") = ("+calc[i]+"("+valueMapping.get(i)+") / "+m.getOrders()[0].price+"("+valueMapping.get(j)+")) -"
+									+ "(("+calc[i]+"("+valueMapping.get(i)+") / "+m.getOrders()[0].price+"("+valueMapping.get(j)+")) * "+m.getTransactionFee()+"("+m.getMarketName()+"))\n");
+							// concrete number at the end
+							explanator.append("Bought volume("+valueMapping.get(j)+") = "+tempBuy+"\n");
+							explanator.append(ExplanationSingleton.lastNOrdersFromMarket(5, m));
+
+							}
+
 						}
 
 						calc[j] += tempBuy;
@@ -277,6 +360,8 @@ public class BTC_e {
 						// +valueMapping.get(j)+" With "+calc[i]
 						// +" "+valueMapping.get(i)+" = " + tempBuy);
 
+						// TODO: calculation
+						calc[i] = 0;
 						calc[i] -= calc[i];
 
 					}
@@ -295,16 +380,19 @@ public class BTC_e {
 				// it.remove();
 				boolean t = false;
 				// evaluate the solution
-				for (int i = 0; i < calc.length; i++) {
-					if (calc[i] > 0) {
+				for (int testCount = 0; testCount < calc.length; testCount++) {
+					if (calc[testCount] > 0) {
 						t = true;
+						explanator.append("############");
+
 						// System.out.println("Found soulution "+calc[i]);
+						System.out.println(explanator.toString());
 
 						break;
 					} else {
 						// System.out.println("Found soulution "+calc[i]);
 						// for(int gg=0;gg<calc.length;gg++){
-						if (calc[i] != 0) {
+						if (calc[testCount] != 0) {
 							// System.out.print(valueMapping.get(i)+":"+new
 							// BigDecimal(calc[i]).toString()+" ");
 							// if(calc[gg]>lowest_diff) lowest_diff = calc[gg];
@@ -315,14 +403,17 @@ public class BTC_e {
 					}
 				}
 
-				if (t) {
+				// if solution
+				if (t) {					
+					for (int i1 = 0; i1 < calc.length; i1++) {
+						// report every node higher than 0
+						if (calc[i1] > 0){
+							// report solution heuristic
 
-					for (int i = 0; i < calc.length; i++) {
-						if (calc[i] > 0)
-							ReporterSingleton.newSolution(calc[i],
-									valueMapping.get(i), solverData,
-									nodeMapping);
-
+							ReporterSingleton.addInvolvedCount(calc[i1],
+									valueMapping.get(i1), solverData,
+									nodeMapping); 
+						}
 						// System.out.print(valueMapping.get(i)+":"+new
 						// BigDecimal(calc[i]).toString());
 						// System.out.println("");
@@ -363,7 +454,8 @@ public class BTC_e {
 		dataTransferError.set(false);
 		
 		blockWorkerThreadsAtLoopEnd.set(false); // unblock all threads at the end **** (awaitAdvance(1))
-
+		mainToOtherThreads.countDown();
+		
 		mainThreadWait.set(true);
 		
 		long nanos = System.nanoTime();
@@ -376,14 +468,16 @@ public class BTC_e {
 			executor.execute(new Runnable() {
 				public void run() {
 					
-					while(true){
-						
+					
 					if(multiThreadingSetup){
 						Thread t = Thread.currentThread();
 						t.setPriority(Thread.MAX_PRIORITY);
 						Thread.yield();
 					}
 
+					while(true){
+						
+					
 						
 					// if not setup then do normal 
 					phaserBlockMainThread.register(); // register task
@@ -428,16 +522,35 @@ public class BTC_e {
 
 					phaserBlockMainThread.arrive(); // say main thread finished
 					
+					long milis = 10 + (System.currentTimeMillis() % 50);
+
 					// System.out.println("--> Thread ending " + trans);
 					while(blockWorkerThreadsAtLoopEnd.get()){
 						try {
-							Thread.sleep(20);
+							
+							//Thread.sleep(System.currentTimeMillis() % 1000);
+							// put them wait in latch
+							
+							Thread.sleep(41);
+						//	milis = (milis/2) +5;
+							
 						} catch (InterruptedException e) {
-							// TODO Auto-generated catch block
+							// 
 							e.printStackTrace();
 						}
 					}
 					//phaserBlockWorkerThreads.register();
+					
+					
+					mainToOtherThreads.countDown();
+					try {
+						mainToOtherThreads.await();
+					} catch (InterruptedException e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+					}
+					// first thread unset sync time
+					//if(threadSynchonizationTime.get()>0)threadSynchonizationTime.set(0);
 					
 				
 					}
@@ -455,9 +568,26 @@ public class BTC_e {
 		}
 		*/
 		
-		while(mainThreadWait.get()){Thread.sleep(151);}; // wait for register 
+
+
+		while(mainThreadWait.get()){
+			
+			// try to sleep next 100ms or 50ms to sleep
+			// synchronize sleeping of threads to get paralell execution
+			//System.out.println(milis); 
+
+			Thread.sleep(150);
+			
+
+		}; // wait for register
+		mainToOtherThreads = new CountDownLatch(allMarkets.length + 1);
+
+
+
 		//wait for motherfuckers
 		phaserBlockMainThread.arriveAndAwaitAdvance(); 
+		
+
 		//phaserBlockMainThread.(); // register self (main thread)
 
 		
@@ -476,7 +606,7 @@ public class BTC_e {
 
 		
 
-		// try again TODO: test this thing 
+		// try again  
 		if (dataTransferError.get()) {
 			//getDataFromInternet();
 		}

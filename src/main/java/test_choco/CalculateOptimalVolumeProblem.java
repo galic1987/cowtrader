@@ -279,28 +279,16 @@ public class CalculateOptimalVolumeProblem extends AbstractProblem  {
         	}
        // System.out.println(transfer[1]);
         //solver.findSolution();
-       // solver.getIbex().release();
 		//solver.getIbex().release();
 
     }
 
     @Override
     public void prettyOut() {
-    	if(true)return;
-        
+		solver.getIbex().release();
+
 
     	
-//        LoggerFactory.getLogger("bench").info("Alpha");
-//        StringBuilder st = new StringBuilder();
-//        st.append("\t");
-//        for (int i = 0; i < 26; i++) {
-//            st.append(letters[i].getName()).append("= ").append(letters[i].getValue()).append(" ");
-//            if (i % 6 == 5) {
-//                st.append("\n\t");
-//            }
-//        }
-//        st.append("\n");
-//        LoggerFactory.getLogger("bench").info(st.toString());
     }
     
     public void start(){

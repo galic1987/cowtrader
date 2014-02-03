@@ -2,6 +2,7 @@ package otradotra;
 
 import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
@@ -12,7 +13,13 @@ import java.util.List;
 import java.util.Map;
 import java.util.Scanner;
 
+import org.apache.http.HttpEntity;
+import org.apache.http.client.methods.CloseableHttpResponse;
+import org.apache.http.client.methods.HttpGet;
+import org.apache.http.impl.client.CloseableHttpClient;
+
 import otradotra.helper.HttpUtils;
+import otradotra.helper.NetworkOptimizatorSingleton;
 import net.sf.json.JSONArray;
 import net.sf.json.JSONException;
 import net.sf.json.JSONObject;
@@ -54,7 +61,7 @@ public MarketJsonConnector(String from, String to) {
 		// TODO Auto-generated constructor stub
 	}
 
-public Market[] parseBTCeOrders(String url, String name){
+public Market[] parseBTCeOrders(String url, String name) throws Exception{
 	// open url 
 	// create markets
   //  String[]name1 = name.split("_");
@@ -62,12 +69,14 @@ public Market[] parseBTCeOrders(String url, String name){
 //	long nanos = System.nanoTime();
 	
     // time fast
-    markets[0].setGotRequestFromServerDate(new Date());
-    markets[1].setGotRequestFromServerDate(new Date());    
+    
     
     //String requestResult = HttpUtils.httpGet(url);
-    String requestResult = this.httpGet(url);
+    //String requestResult = this.httpGet(url);
+    String requestResult = this.apacheHttpGet(url);
     
+    markets[0].setGotRequestFromServerDate(new Date());
+    markets[1].setGotRequestFromServerDate(new Date());   
     
 //    long duration = System.nanoTime() - nanos;
 //	int seconds = (int) (duration / 1000000000);
@@ -231,4 +240,43 @@ public String httpGet( String url ) {
     return result != null ? result.toString() : null;
  }
 	
+
+
+public String apacheHttpGet(String url) throws Exception{
+	 BufferedReader reader;
+	    String currentLine;
+	    StringBuffer result = new StringBuffer();
+	    
+	  InputStream instream = null;
+	HttpGet httpget = new HttpGet(url);
+	CloseableHttpClient httpClient = NetworkOptimizatorSingleton.createConnetor();
+	CloseableHttpResponse response = httpClient.execute(httpget);
+	try {
+	    HttpEntity entity = response.getEntity();
+	    if (entity != null) {
+	      instream =  entity.getContent();
+	        
+	        	
+	            //box.setText("Getting data ...");
+	            reader = new BufferedReader( new InputStreamReader( instream));
+
+	            while( ( currentLine = reader.readLine()) != null) {
+	                result.append( currentLine);
+	            }
+	            reader.close();
+	          
+	            
+	            // do something useful
+	        	//System.out.println(content);
+	       
+	    }
+	} finally {
+	    response.close();
+        instream.close();
+        //httpClient.close();
+	}
+	return result.toString();
+
+}
+
 }
