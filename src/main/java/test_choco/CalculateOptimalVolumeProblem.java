@@ -8,7 +8,6 @@ import java.text.DecimalFormat;
 import java.util.Iterator;
 import java.util.Map;
 
-import models.Order;
 
 import org.apache.commons.lang.ArrayUtils;
 import org.slf4j.LoggerFactory;
@@ -186,7 +185,7 @@ public class CalculateOptimalVolumeProblem extends AbstractProblem  {
                     	        vars)
                     			);
             		}else{
-            			// multiply bid
+            			// multiply ask
             			solver.post(new RealConstraint(
                 				"C_TransferBID"+realArr,
                 				"{1} = ({0} / "+price+") - (({0} / "+price+") * "+m.getTransactionFee()+")",
@@ -200,6 +199,13 @@ public class CalculateOptimalVolumeProblem extends AbstractProblem  {
             		solver.post(new RealConstraint(
             				"C_ResourceLimit"+realArr,
             				"{0} <= "+resources.get(i),
+                	        Ibex.COMPO, 
+                	        vars)
+                			);
+            		
+            		solver.post(new RealConstraint(
+            				"C_ResourceLimitLower"+realArr,
+            				"{0} >= 0.1",
                 	        Ibex.COMPO, 
                 	        vars)
                 			);

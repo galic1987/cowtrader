@@ -31,7 +31,7 @@ public class MarketJsonConnector {
 
 	
 	
-	int maxNumberOfOrders = 10;
+	int maxNumberOfOrders = 15;
 	final Market [] markets;
 
 	// constructor is final
@@ -45,7 +45,8 @@ public MarketJsonConnector(String from, String to) {
 	    markets[0].setType( MarketType.ASK);
 	    markets[0].setFrom(from);
 	    markets[0].setTo(to);
-	    markets[0].setMarketName(from+"_"+to);
+	    markets[0].setMarketName(to+"_"+from);
+
 
 	    
 	    // BID
@@ -54,8 +55,8 @@ public MarketJsonConnector(String from, String to) {
 	    markets[1].setType( MarketType.BID);
 	    markets[1].setFrom(to); //### inverse
 	    markets[1].setTo(from);//### inverse
-	    markets[1].setMarketName(to+"_"+from);
-	    
+	    markets[1].setMarketName(from+"_"+to);
+
 	    
 
 		// TODO Auto-generated constructor stub

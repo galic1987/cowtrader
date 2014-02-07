@@ -18,6 +18,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 
+import marketHole.MarketHoleCalculator;
 import net.sf.json.JSONException;
 import net.sf.json.JSONObject;
 
@@ -79,6 +80,7 @@ public class BTC_e {
 	
 	
 	public static void main(String[] args) throws InterruptedException {
+		
 		
 		
 		// 0. Market connection data
@@ -222,7 +224,7 @@ public class BTC_e {
 	}
 
 	public static void tryCyclesEvaluation() {
-		boolean explain = true;
+		boolean explain = false;
 
 		double[] calc = new double[solverData.length];
 		double[] kol = new double[solverData.length];
@@ -243,9 +245,11 @@ public class BTC_e {
 			Map<Integer, Integer> nodeMapping = problem.getSolutions()[cycleNumber];
 			Iterator it = nodeMapping.entrySet().iterator();
 			while (it.hasNext()) {
+				if(explain){
 				explanator = new StringBuffer();
 				explanator.append("############ ");
-
+				}
+				
 				Map.Entry pairs = (Map.Entry) it.next();
 				// go throught full cycle beginning with actual node
 				int actualNode = (Integer) pairs.getKey();
@@ -383,10 +387,12 @@ public class BTC_e {
 				for (int testCount = 0; testCount < calc.length; testCount++) {
 					if (calc[testCount] > 0) {
 						t = true;
-						explanator.append("############");
 
 						// System.out.println("Found soulution "+calc[i]);
+						if(explain){
+						explanator.append("############");
 						System.out.println(explanator.toString());
+						}
 
 						break;
 					} else {
@@ -413,6 +419,9 @@ public class BTC_e {
 							ReporterSingleton.addInvolvedCount(calc[i1],
 									valueMapping.get(i1), solverData,
 									nodeMapping); 
+							
+							VariationsCacheCalculator c = new VariationsCacheCalculator(solverData, 14, nodeMapping, valueMapping, resources);
+							c.start();
 						}
 						// System.out.print(valueMapping.get(i)+":"+new
 						// BigDecimal(calc[i]).toString());
