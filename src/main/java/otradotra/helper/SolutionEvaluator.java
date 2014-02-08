@@ -3,7 +3,7 @@ package otradotra.helper;
 import java.util.HashMap;
 import java.util.Map;
 
-import otradotra.Market;
+import otradotra.models.Market;
 
 public class SolutionEvaluator {
 	double number;

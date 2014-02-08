@@ -24,14 +24,15 @@ import net.sf.json.JSONObject;
 
 import org.apache.commons.codec.binary.Hex;
 
-import otradotra.Market;
 import otradotra.MarketJsonConnector;
 import otradotra.MarketType;
 import otradotra.helper.ExplanationSingleton;
 import otradotra.helper.HttpUtils;
+import otradotra.helper.JSONParsingOptimizationSingleton;
 import otradotra.helper.MarketNameHelper;
 import otradotra.helper.NetworkOptimizatorSingleton;
 import otradotra.helper.ReporterSingleton;
+import otradotra.models.Market;
 
 /**
  * Hello world!
@@ -103,6 +104,7 @@ public class BTC_e {
 		// init setup
 		setup();
 		NetworkOptimizatorSingleton.getInstance();
+		JSONParsingOptimizationSingleton.getInstance();
 		
 		// tuning java
 				Properties props = System.getProperties();

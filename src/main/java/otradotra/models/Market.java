@@ -1,6 +1,8 @@
-package otradotra;
+package otradotra.models;
 
 import java.util.Date;
+
+import otradotra.MarketType;
 
 
 
@@ -16,7 +18,7 @@ public class Market {
 	MarketType type;
 	
 	// list of orders volumen | price | total
-	MarketOrder[] orders;
+    MarketOrderDataHolder[] orders;
 	String marketName;
 	
 	// string BTC -> USD  or USD -> BTC
@@ -42,7 +44,7 @@ public class Market {
 	double transactionFee;
 
 // returns best order bid-Lowest & ask-Highest
-MarketOrder getMeBestOrder(){
+MarketOrderDataHolder getMeBestOrder(){
 	// sorted ASK & BID
 	return orders[0];
 }
@@ -63,11 +65,11 @@ public void setType(MarketType type) {
 	this.type = type;
 }
 
-public MarketOrder[] getOrders() {
+public MarketOrderDataHolder[] getOrders() {
 	return orders;
 }
 
-public void setOrders(MarketOrder[] orders) {
+public void setOrders(MarketOrderDataHolder[] orders) {
 	this.orders = orders;
 }
 

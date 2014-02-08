@@ -4,8 +4,8 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 
-import otradotra.Market;
 import otradotra.MarketType;
+import otradotra.models.Market;
 import test_choco.CalculateOptimalVolumeProblem;
 import test_choco.MarketProblem;
 
@@ -134,7 +134,7 @@ public class ReporterSingleton {
 	// only on solution
 	public static void addInvolvedCount(double value, String currency, Market[][] m,Map<Integer, Integer> nodeMapping) {
 		
-		if(involvedDupes.containsKey(nodeMapping)) return; // return on duplicates
+		if(involvedDupes.get(nodeMapping)!=null) return; // return on duplicates
 		
 		involvedDupes.put(nodeMapping, true); // add it so we dont add it again
 
@@ -162,7 +162,7 @@ public class ReporterSingleton {
 
 			String node = i + "->" + j;
 			// if new add +1
-			if (involvedNodesCounter.containsKey(node)) {
+			if (involvedNodesCounter.get(node)!=null) {
 				involvedNodesCounter.put(node,
 						involvedNodesCounter.get(node) + 1);
 			} else {

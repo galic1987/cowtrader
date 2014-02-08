@@ -9,6 +9,7 @@ import java.net.MalformedURLException;
 import java.net.ProtocolException;
 import java.net.URL;
 import java.util.Date;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Scanner;
@@ -17,9 +18,15 @@ import org.apache.http.HttpEntity;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.impl.client.CloseableHttpClient;
+import org.codehaus.jackson.JsonNode;
+import org.codehaus.jackson.JsonProcessingException;
+import org.codehaus.jackson.map.ObjectMapper;
 
 import otradotra.helper.HttpUtils;
+import otradotra.helper.JSONParsingOptimizationSingleton;
 import otradotra.helper.NetworkOptimizatorSingleton;
+import otradotra.models.Market;
+import otradotra.models.MarketOrderDataHolder;
 import net.sf.json.JSONArray;
 import net.sf.json.JSONException;
 import net.sf.json.JSONObject;
@@ -30,7 +37,7 @@ public class MarketJsonConnector {
     HttpURLConnection connection = null;
 
 	
-	
+    ObjectMapper objectMapper = null;
 	int maxNumberOfOrders = 15;
 	final Market [] markets;
 
@@ -38,7 +45,7 @@ public class MarketJsonConnector {
 public MarketJsonConnector(String from, String to) {
 		super();
 	    markets = new Market[2];
-	    
+	    objectMapper = new ObjectMapper();
 	 // ASK
 	    markets[0] = new Market();
 	    markets[0].setTransactionFee(0.002D);
@@ -67,17 +74,20 @@ public Market[] parseBTCeOrders(String url, String name) throws Exception{
 	// create markets
   //  String[]name1 = name.split("_");
     
-//	long nanos = System.nanoTime();
 	
     // time fast
     
     
     //String requestResult = HttpUtils.httpGet(url);
     //String requestResult = this.httpGet(url);
-    String requestResult = this.apacheHttpGet(url);
     
-    markets[0].setGotRequestFromServerDate(new Date());
-    markets[1].setGotRequestFromServerDate(new Date());   
+    //markets[0].setGotRequestFromServerDate(new Date());
+    //markets[1].setGotRequestFromServerDate(new Date());   
+//    try{
+//	long nanos = System.nanoTime();
+//    
+//    String requestResult = this.apacheHttpGet(url);
+
     
 //    long duration = System.nanoTime() - nanos;
 //	int seconds = (int) (duration / 1000000000);
@@ -87,35 +97,12 @@ public Market[] parseBTCeOrders(String url, String name) throws Exception{
 //			.printf(markets[0].getMarketName()+" Internet Time: %d seconds, %d milliseconds en %d nanoseconds\n",
 //					seconds, milliseconds, nanoseconds);
 
-    try {
-        // Convert the HTTP request return value to JSON to parse further.
-        //System.out.println( "result " + requestResult);
-
-    	
-        JSONObject jsonResult = JSONObject.fromObject(requestResult);
-
-        	// ASK
-            JSONArray ask = jsonResult.getJSONArray("asks");            
-            markets[0] = this.parse(markets[0], ask);
-            markets[0].setDate(new Date());
-
-            
-            // BID
-            JSONArray bid = jsonResult.getJSONArray("bids");
-            markets[1] = this.parse(markets[1], bid);
-            markets[1].setDate(new Date());
-
-            jsonResult = null;
-            requestResult = null;
-            
-            // alles klar
-            return markets;
-
-    }	 catch( JSONException je) {
-        System.err.println( "Cannot parse json request result: " + je.toString());
-
-        return null;  // An error occured...
-    }
+	return jacksonWayParsing(this.apacheHttpGet(url));
+//    }catch(Exception e){
+//    	e.printStackTrace();
+//    	return null;
+//    }
+//    
     
     
 	// parse JsonData
@@ -123,13 +110,121 @@ public Market[] parseBTCeOrders(String url, String name) throws Exception{
 	//return null;
 }
 
+public Market[] jacksonWayParsing(String requestResult) throws JsonProcessingException, IOException{
+	        // Convert the HTTP request return value to JSON to parse further.
+	        //System.out.println( "result " + requestResult);
+		 // ObjectMapper objectMapper =  JSONParsingOptimizationSingleton.getMapper();
+		  
+		//read JSON like DOM Parser 
+		  JsonNode rootNode = objectMapper.readTree(requestResult);
+
+		  
+	        	// ASK
+	        	JsonNode ask = rootNode.path("asks");
+	            markets[0] = this.parseJackson(markets[0], ask);
+	            markets[0].setDate(new Date());
+
+	            
+	            // BID
+	  		  	JsonNode bid = rootNode.path("bids");
+	            markets[1] = this.parseJackson(markets[1], bid);
+	            markets[1].setDate(new Date());
+
+	            rootNode = null;
+	            requestResult = null;
+	            
+	            // alles klar
+	            return markets;
+
+	   
+}
+
+
+
+@SuppressWarnings("unchecked")
+public Market parseJackson(Market mark, JsonNode data){
+	//mark.orders = new MarketOrder[data.size()];
+	mark.setOrders(new MarketOrderDataHolder[maxNumberOfOrders]);
+    int it = 0;
+    
+    Iterator<JsonNode> elements = data.getElements();
+	  while(elements.hasNext()){
+	      JsonNode iterable_element = elements.next();
+
+	  
+    	MarketOrderDataHolder m = new MarketOrderDataHolder();
+    	//System.out.println("- " + iterable_element);
+    	Iterator<JsonNode> ordersPairs = iterable_element.getElements();
+    	int i = 0;
+   	   	while(ordersPairs.hasNext()){
+  	      JsonNode myOrder = ordersPairs.next();
+
+	   	   	if (i == 0){
+	   	   		m.price = myOrder.getDoubleValue();
+	   	   	}else{
+	   	   		m.volume = myOrder.getDoubleValue();
+	   	   	}
+	   	i++;
+	   	}
+      	// TODO: total is nothing
+    	//m.total = m.price * m.volume;
+    	//System.out.println("total = "+ m.total +" = " + m.price + "*" + m.volume);
+    	mark.getOrders()[it] = m;
+	  
+    	it++;
+    	if(it==maxNumberOfOrders){
+    		break;
+    	}
+    	
+    }
+    data = null;
+    
+    return mark;
+}
+
+
+
+public Market[] standardWayParsing(String requestResult){
+		  try {
+		        // Convert the HTTP request return value to JSON to parse further.
+		        //System.out.println( "result " + requestResult);
+
+		    	
+		        JSONObject jsonResult = JSONObject.fromObject(requestResult);
+
+		        	// ASK
+		            JSONArray ask = jsonResult.getJSONArray("asks");            
+		            markets[0] = this.parse(markets[0], ask);
+		            markets[0].setDate(new Date());
+
+		            
+		            // BID
+		            JSONArray bid = jsonResult.getJSONArray("bids");
+		            markets[1] = this.parse(markets[1], bid);
+		            markets[1].setDate(new Date());
+
+		            jsonResult = null;
+		            requestResult = null;
+		            
+		            // alles klar
+		            return markets;
+
+		    }	 catch( JSONException je) {
+		        System.err.println( "Cannot parse json request result: " + je.toString());
+
+		        return null;  // An error occured...
+		    }
+}
+
+
 @SuppressWarnings("unchecked")
 public Market parse(Market mark, JSONArray data){
 	//mark.orders = new MarketOrder[data.size()];
-	mark.orders = new MarketOrder[maxNumberOfOrders];
+	mark.setOrders(new MarketOrderDataHolder[maxNumberOfOrders]);
     int it = 0;
+    
     for (Object iterable_element : data) {
-    	MarketOrder m = new MarketOrder();
+    	MarketOrderDataHolder m = new MarketOrderDataHolder();
     	//System.out.println("- " + iterable_element);
     	List<Object> o = (List<Object>)iterable_element;
     	for (int i = 0; i < o.size(); i++) {
@@ -148,12 +243,13 @@ public Market parse(Market mark, JSONArray data){
     			}catch(ClassCastException a){
     				Integer number = (Integer)o.get(i);
     				m.volume = number.doubleValue();
-    			}    		}
+    			}    		
+    			}
     	}
     	// TODO: total is nothing
     	//m.total = m.price * m.volume;
     	//System.out.println("total = "+ m.total +" = " + m.price + "*" + m.volume);
-    	mark.orders[it] = m;
+    	mark.getOrders()[it] = m;
     	it++;
     	if(it==maxNumberOfOrders)break;
     }

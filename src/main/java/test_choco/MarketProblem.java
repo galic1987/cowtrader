@@ -8,13 +8,11 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 
-
 import org.apache.commons.lang.ArrayUtils;
 import org.slf4j.LoggerFactory;
 
-import otradotra.Market;
-import otradotra.MarketOrder;
-import otradotra.PropMarketsEvalObj;
+import otradotra.models.Market;
+import otradotra.models.MarketOrderDataHolder;
 import samples.AbstractProblem;
 //import samples.integer.Alpha;
 //import samples.integer.Knapsack;

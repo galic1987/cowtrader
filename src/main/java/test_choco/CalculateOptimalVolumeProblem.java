@@ -8,15 +8,13 @@ import java.text.DecimalFormat;
 import java.util.Iterator;
 import java.util.Map;
 
-
 import org.apache.commons.lang.ArrayUtils;
 import org.slf4j.LoggerFactory;
 
-import otradotra.Market;
-import otradotra.MarketOrder;
 import otradotra.MarketType;
-import otradotra.PropMarketsEvalObj;
 import otradotra.helper.ReporterSingleton;
+import otradotra.models.Market;
+import otradotra.models.MarketOrderDataHolder;
 import samples.AbstractProblem;
 //import samples.integer.Alpha;
 //import samples.integer.Knapsack;
