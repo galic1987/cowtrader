@@ -1,8 +1,11 @@
 package otradotra.helper;
 
-import otradotra.MarketType;
+import marketHole.CycleSolutionConfiguration;
 import otradotra.models.Market;
 import otradotra.models.MarketOrderDataHolder;
+import otradotra.models.MarketOrderToSend;
+import otradotra.models.MarketOrderToSendCollection;
+import otradotra.models.MarketType;
 
 // contains pretty print etc
 public class ExplanationSingleton {
@@ -18,6 +21,27 @@ public class ExplanationSingleton {
 			instance = new ExplanationSingleton();
 		}
 		return instance;
+	}
+	
+	
+	public static String explainCycleSolutionConfiguration(CycleSolutionConfiguration cs){
+		StringBuffer buff = new StringBuffer();
+		
+		for(int i =0;i<cs.getOrders().size();i++){
+			MarketOrderToSendCollection ma = cs.getOrders().get(i);
+			
+			String currency = ma.orders.get(0).getMarket().getFrom();
+			buff.append(currency+" : ");
+			double sum = 0;
+			for(int j =0;j<ma.orders.size();j++){
+				MarketOrderToSend order = ma.orders.get(0);
+				sum += order.getAmount();
+			}
+			buff.append(sum + " \n");
+
+		}
+		
+		return buff.toString();
 	}
 	
 	

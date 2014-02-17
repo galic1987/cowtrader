@@ -2,8 +2,6 @@ package otradotra.models;
 
 import java.util.Date;
 
-import otradotra.MarketType;
-
 
 
 
@@ -47,6 +45,14 @@ public class Market {
 MarketOrderDataHolder getMeBestOrder(){
 	// sorted ASK & BID
 	return orders[0];
+}
+
+public String getMeTheType(){
+	if(type == MarketType.BID){
+		return "buy";
+	}else{
+		return "sell";
+	}
 }
 
 public Date getDate() {

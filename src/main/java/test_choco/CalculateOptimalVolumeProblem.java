@@ -11,10 +11,10 @@ import java.util.Map;
 import org.apache.commons.lang.ArrayUtils;
 import org.slf4j.LoggerFactory;
 
-import otradotra.MarketType;
 import otradotra.helper.ReporterSingleton;
 import otradotra.models.Market;
 import otradotra.models.MarketOrderDataHolder;
+import otradotra.models.MarketType;
 import samples.AbstractProblem;
 //import samples.integer.Alpha;
 //import samples.integer.Knapsack;

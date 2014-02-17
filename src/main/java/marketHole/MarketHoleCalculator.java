@@ -25,7 +25,7 @@ public class MarketHoleCalculator {
 	// out - filled by recursion
 	// data about holes
 	// market configuration
-	private ArrayList<CycleConfigurationModel> solutionConfigurations; // out
+	private ArrayList<CycleSolutionConfiguration> solutionConfigurations; // out
 
 		
 	// this is called to try recursive search of markets

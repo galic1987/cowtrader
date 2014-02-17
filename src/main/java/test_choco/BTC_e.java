@@ -24,15 +24,16 @@ import net.sf.json.JSONObject;
 
 import org.apache.commons.codec.binary.Hex;
 
-import otradotra.MarketJsonConnector;
-import otradotra.MarketType;
+import otradotra.helper.DataMarketIntegrityCheck;
 import otradotra.helper.ExplanationSingleton;
-import otradotra.helper.HttpUtils;
-import otradotra.helper.JSONParsingOptimizationSingleton;
-import otradotra.helper.MarketNameHelper;
-import otradotra.helper.NetworkOptimizatorSingleton;
 import otradotra.helper.ReporterSingleton;
 import otradotra.models.Market;
+import otradotra.models.MarketNameHelper;
+import otradotra.models.MarketType;
+import otradotra.network.HttpUtils;
+import otradotra.network.JSONParsingOptimizationSingleton;
+import otradotra.network.MarketJsonConnector;
+import otradotra.network.NetworkOptimizatorSingleton;
 
 /**
  * Hello world!
@@ -50,7 +51,7 @@ public class BTC_e {
 	private static MarketNameHelper[] allMarkets;
 	private static Map<Integer, String> valueMapping;
 	private static Map<String, Integer> keyMapping;
-	private static MarketJsonConnector[] connector;
+	private static MarketJsonConnector[] connector; // changes time start end
 	private static int numberOfNodes;
 	private static final double low = -10; // lowest difference
 
@@ -77,6 +78,11 @@ public class BTC_e {
 	private static CountDownLatch mainToOtherThreads;
 	
 	
+	// data time integrity array
+	private static long [] startData;
+	private static long [] endData;
+	
+	
 	
 	
 	
@@ -100,15 +106,27 @@ public class BTC_e {
 		
 		
 		
-
+		
+		
 		// init setup
 		setup();
+		
+		 // network data integrity timestamp measuerment
+		 startData = new long[connector.length];
+		 endData = new long[connector.length];
+		 
+		 
+		
+		for(int i =0; i<allMarkets.length;i++){
+			//System.out.println(allMarkets[i].url);
+			//HttpUtils.httpGet(allMarkets[i].url);
+		}
 		NetworkOptimizatorSingleton.getInstance();
 		JSONParsingOptimizationSingleton.getInstance();
 		
 		// tuning java
 				Properties props = System.getProperties();
-				props.setProperty("http.keepAlive", "true");
+				//props.setProperty("http.keepAlive", "true");
 				//props.setProperty("http.maxConnections", allMarkets.length+"" );
 				props.setProperty("http.maxConnections", "256" );
 				
@@ -126,6 +144,7 @@ public class BTC_e {
 		 getDataFromInternet();
 		 multiThreadingSetup = false;
 
+		
 
 		 
 		// set reporter mappings
@@ -206,13 +225,13 @@ public class BTC_e {
 
 			if (ReporterSingleton.roundhighestValueBalancingCurrency > 0) {
 
-				CalculateOptimalVolumeProblem problem = new CalculateOptimalVolumeProblem(
+			/*	CalculateOptimalVolumeProblem problem = new CalculateOptimalVolumeProblem(
 						solverData, ReporterSingleton.roundHigh,
 						ReporterSingleton.roundCurrency,
 						ReporterSingleton.roundAround,
 						ReporterSingleton.roundAround.size(), valueMapping,
 						keyMapping, resources);
-				problem.start();
+				problem.start();*/
 			}
 			
 			//System.out.println(
@@ -366,7 +385,6 @@ public class BTC_e {
 						// +valueMapping.get(j)+" With "+calc[i]
 						// +" "+valueMapping.get(i)+" = " + tempBuy);
 
-						// TODO: calculation
 						calc[i] = 0;
 						calc[i] -= calc[i];
 
@@ -417,13 +435,25 @@ public class BTC_e {
 						// report every node higher than 0
 						if (calc[i1] > 0){
 							// report solution heuristic
-
-							ReporterSingleton.addInvolvedCount(calc[i1],
+							CycleVolumeCalculator c = new CycleVolumeCalculator(solverData, 14, nodeMapping, valueMapping, resources,keyMapping);
+							c.start();
+							
+							// here get max earnings from this cycle 
+							// TODO: c.getMax -> report to Reporter as value']
+							
+							if(c.getSolutionConfiguration() == null) break;
+							
+							ReporterSingleton.addInvolvedCount(c.getSolutionConfiguration().getValue(),
 									valueMapping.get(i1), solverData,
 									nodeMapping); 
 							
-							VariationsCacheCalculator c = new VariationsCacheCalculator(solverData, 14, nodeMapping, valueMapping, resources);
-							c.start();
+							String g = valueMapping.get(i1);
+							String m = c.getSolutionConfiguration().getCurrency();
+							
+							System.out.println(ExplanationSingleton.explainCycleSolutionConfiguration(c.getSolutionConfiguration()));
+							
+							ReporterSingleton.highVolumeRound(c.getSolutionConfiguration().getValue(), valueMapping.get(i1), c.getSolutionConfiguration(), solverData);
+							
 						}
 						// System.out.print(valueMapping.get(i)+":"+new
 						// BigDecimal(calc[i]).toString());
@@ -501,6 +531,7 @@ public class BTC_e {
 
 					Market[] marketTemp = null;
 					try {
+						startData[trans] = System.currentTimeMillis();
 						marketTemp = connector[trans].parseBTCeOrders(
 								allMarkets[trans].url, allMarkets[trans].bid);
 						
@@ -523,12 +554,17 @@ public class BTC_e {
 								cache = false;
 							}
 						}
+						
+						
 					} catch (Exception e) {
 						cache = false; // if one thread fails do
 										// MarketProblemCycle again
+						e.printStackTrace();
 						dataTransferError.set(true);
 					}
 					
+					endData[trans] = System.currentTimeMillis();
+
 					marketTemp = null;
 
 					phaserBlockMainThread.arrive(); // say main thread finished
@@ -557,7 +593,7 @@ public class BTC_e {
 					try {
 						mainToOtherThreads.await();
 					} catch (InterruptedException e) {
-						// TODO Auto-generated catch block
+						
 						e.printStackTrace();
 					}
 					// first thread unset sync time
@@ -598,7 +634,13 @@ public class BTC_e {
 		//wait for motherfuckers
 		phaserBlockMainThread.arriveAndAwaitAdvance(); 
 		
-
+		
+		
+		double startIntegrity = DataMarketIntegrityCheck.maxDistanceMs(startData);
+		System.out.println("Integrity Start differece " + startIntegrity);
+		
+		double endIntegrity = DataMarketIntegrityCheck.maxDistanceMs(endData);
+		System.out.println("Integrity End differece " + endIntegrity);
 		//phaserBlockMainThread.(); // register self (main thread)
 
 		
@@ -690,50 +732,53 @@ public class BTC_e {
 		 */
 
 		// truststore fix multithreading
-		String fixble = HttpUtils
-				.httpGet("https://btc-e.com/api/2/btc_usd/depth");
+		/*String fixble = HttpUtils
+				.httpGet("https://btc-e.com/api/2/btc_usd/depth");*/
 		// 1. List of markets / links / marketdata
-		allMarkets = new MarketNameHelper[15];
+		allMarkets = new MarketNameHelper[16];
 		// btc
 		allMarkets[0] = new MarketNameHelper("btc", "usd",
-				"https://btc-e.com/api/2/btc_usd/depth");
+				"https://btc-e.com/api/2/btc_usd/depth", 0.002);
 		allMarkets[1] = new MarketNameHelper("btc", "rur",
-				"https://btc-e.com/api/2/btc_rur/depth");
+				"https://btc-e.com/api/2/btc_rur/depth", 0.002);
 		allMarkets[2] = new MarketNameHelper("btc", "eur",
-				"https://btc-e.com/api/2/btc_eur/depth");
+				"https://btc-e.com/api/2/btc_eur/depth", 0.002);
 
 		// ltc
 		allMarkets[3] = new MarketNameHelper("ltc", "btc",
-				"https://btc-e.com/api/2/ltc_btc/depth");
+				"https://btc-e.com/api/2/ltc_btc/depth", 0.002);
 		allMarkets[4] = new MarketNameHelper("ltc", "usd",
-				"https://btc-e.com/api/2/ltc_usd/depth");
+				"https://btc-e.com/api/2/ltc_usd/depth", 0.002);
 		allMarkets[5] = new MarketNameHelper("ltc", "rur",
-				"https://btc-e.com/api/2/ltc_rur/depth");
+				"https://btc-e.com/api/2/ltc_rur/depth", 0.002);
 		allMarkets[6] = new MarketNameHelper("ltc", "eur",
-				"https://btc-e.com/api/2/ltc_eur/depth");
+				"https://btc-e.com/api/2/ltc_eur/depth", 0.002);
 		// fiat
 
 		allMarkets[7] = new MarketNameHelper("usd", "rur",
-				"https://btc-e.com/api/2/usd_rur/depth");
+				"https://btc-e.com/api/2/usd_rur/depth", 0.005);
 		allMarkets[8] = new MarketNameHelper("eur", "usd",
-				"https://btc-e.com/api/2/eur_usd/depth");
+				"https://btc-e.com/api/2/eur_usd/depth", 0.002);
 
 		// nvc
 		allMarkets[9] = new MarketNameHelper("nvc", "btc",
-				"https://btc-e.com/api/2/nvc_btc/depth");
+				"https://btc-e.com/api/2/nvc_btc/depth", 0.002);
 		allMarkets[10] = new MarketNameHelper("nvc", "usd",
-				"https://btc-e.com/api/2/nvc_usd/depth");
+				"https://btc-e.com/api/2/nvc_usd/depth", 0.002);
 
 		// nmc
 		allMarkets[11] = new MarketNameHelper("nmc", "btc",
-				"https://btc-e.com/api/2/nmc_btc/depth");
+				"https://btc-e.com/api/2/nmc_btc/depth", 0.002);
 		allMarkets[12] = new MarketNameHelper("nmc", "usd",
-				"https://btc-e.com/api/2/nmc_usd/depth");
+				"https://btc-e.com/api/2/nmc_usd/depth", 0.002);
 		// ppc
 		allMarkets[13] = new MarketNameHelper("ppc", "btc",
-				"https://btc-e.com/api/2/ppc_btc/depth");
+				"https://btc-e.com/api/2/ppc_btc/depth", 0.002);
 		allMarkets[14] = new MarketNameHelper("ppc", "usd",
-				"https://btc-e.com/api/2/ppc_usd/depth");
+				"https://btc-e.com/api/2/ppc_usd/depth", 0.002);
+		
+		allMarkets[15] = new MarketNameHelper("eur", "rur",
+				"https://btc-e.com/api/2/eur_rur/depth", 0.005);
 
 		/*
 		 * // rest vs btc - deadend not interesting allMarkets[17] = new
@@ -755,7 +800,7 @@ public class BTC_e {
 		for (int i = 0; i < allMarkets.length; i++) {
 			// create connector object - make preparation
 			connector[i] = new MarketJsonConnector(allMarkets[i].ask,
-					allMarkets[i].bid);
+					allMarkets[i].bid, allMarkets[i].transactionFee);
 
 			// ask
 			if (!keyMapping.containsKey(allMarkets[i].ask)) {

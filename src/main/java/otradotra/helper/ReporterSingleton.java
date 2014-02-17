@@ -4,8 +4,9 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 
-import otradotra.MarketType;
+import marketHole.CycleSolutionConfiguration;
 import otradotra.models.Market;
+import otradotra.models.MarketType;
 import test_choco.CalculateOptimalVolumeProblem;
 import test_choco.MarketProblem;
 
@@ -27,7 +28,8 @@ public class ReporterSingleton {
 	public static double highestValue = 0;
 	public static double roundhighestValueBalancingCurrency = 0;
 	public static double totalValue = 0;
-	public static Map<Integer, SolutionEvaluator> snapShot = new HashMap<Integer, SolutionEvaluator>();
+	public static CycleSolutionConfiguration cycleHighest;
+	//public static Map<Integer, SolutionEvaluator> snapShot = new HashMap<Integer, SolutionEvaluator>();
 
 	// on round change
 	public static double roundHigh = -10;
@@ -55,9 +57,40 @@ public class ReporterSingleton {
 			Map<Integer, Integer> nodeMapping) {
 
 	}
+	
+	public static void highVolumeRound(double value, String currency,
+			CycleSolutionConfiguration cycle, Market[][] m) {
+		
+		double currentHighest = ReporterSingleton.getValue(roundCurrency,
+				roundHigh, balancingCurrency, m, keyMapping);
+		double tryHighest = ReporterSingleton.getValue(currency, value,
+				balancingCurrency, m, keyMapping);
+
+		/*
+		 * System.out.println("##currentHighest "+roundHigh + " " +
+		 * ReporterSingleton.roundCurrency);
+		 * System.out.println("##tryHighest "+value + " " + currency);
+		 * System.out.println("-currentHighest "+currentHighest + " " +
+		 * balancingCurrencyValue); System.out.println("-tryHighest "+tryHighest
+		 * + " " + balancingCurrencyValue);
+		 */
+		if (tryHighest > currentHighest) {
+			ReporterSingleton.roundHigh = value;
+			ReporterSingleton.cycleHighest = cycle;
+			ReporterSingleton.roundCurrency = currency;
+			ReporterSingleton.roundhighestValueBalancingCurrency = tryHighest;
+			cycleHighest =  cycle;
+			// CalculateOptimalVolumeProblem problem = new
+			// CalculateOptimalVolumeProblem(m, value, currency, roundAround,
+			// roundAround.size(), valueMapping, resources);
+			// problem.start();
+
+		}
+	}
 
 	public static void highRound(double value, String currency,
 			Map<Integer, Integer> roundAround, Market[][] m) {
+		
 
 		double currentHighest = ReporterSingleton.getValue(roundCurrency,
 				roundHigh, balancingCurrency, m, keyMapping);
@@ -77,7 +110,7 @@ public class ReporterSingleton {
 			ReporterSingleton.roundAround = roundAround;
 			ReporterSingleton.roundCurrency = currency;
 			ReporterSingleton.roundhighestValueBalancingCurrency = tryHighest;
-
+		
 			// CalculateOptimalVolumeProblem problem = new
 			// CalculateOptimalVolumeProblem(m, value, currency, roundAround,
 			// roundAround.size(), valueMapping, resources);
@@ -122,6 +155,11 @@ public class ReporterSingleton {
 
 	}
 
+	
+	
+	/*
+	 * HIGH INVOLVED arcs Counter for special heuristics 
+	 */
 	public static void resetInvolvedCounter() {
 		involvedNodesCounter = null;
 		involvedNodesCounter = new HashMap<String, Integer>();
@@ -140,8 +178,7 @@ public class ReporterSingleton {
 
 		
 		// add snapshot solution
-			snapShot.put(numberOfSoultions, new SolutionEvaluator(value,
-					currency, nodeMapping, m));
+		
 			ReporterSingleton.numberOfSoultions++;
 			ReporterSingleton.totalValue += value;
 		
