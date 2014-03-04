@@ -30,7 +30,7 @@ public class ExplanationSingleton {
 		for(int i =0;i<cs.getOrders().size();i++){
 			MarketOrderToSendCollection ma = cs.getOrders().get(i);
 			
-			String currency = ma.orders.get(0).getMarket().getFrom();
+			String currency = ma.orders.get(0).getMarket().getTo();
 			buff.append(currency+" : ");
 			double sum = 0;
 			for(int j =0;j<ma.orders.size();j++){

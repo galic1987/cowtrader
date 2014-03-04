@@ -19,6 +19,8 @@ import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 
 import marketHole.MarketHoleCalculator;
+import marketSpecific.AbstractMarketFactory;
+import marketSpecific.BTCEFactory;
 import net.sf.json.JSONException;
 import net.sf.json.JSONObject;
 
@@ -42,10 +44,7 @@ import otradotra.network.NetworkOptimizatorSingleton;
 
 public class BTC_e {
 
-	// Market connection data
-	private static long _nonce;
-	private static String _key;
-	private static String _secret;
+
 
 	// setup optimization costs
 	private static MarketNameHelper[] allMarkets;
@@ -54,6 +53,7 @@ public class BTC_e {
 	private static MarketJsonConnector[] connector; // changes time start end
 	private static int numberOfNodes;
 	private static final double low = -10; // lowest difference
+	private static AbstractMarketFactory factory = null;
 
 	// changable
 	private static Market[][] solverData;
@@ -89,22 +89,12 @@ public class BTC_e {
 	public static void main(String[] args) throws InterruptedException {
 		
 		
-		
-		// 0. Market connection data
-		_key = "FLSE6TVR-4JDIPJB8-S7WH5EZ6-HDFNXFXG-RR1FYGEG";
-		_secret = "00fe262a56e0225d9b50c197e62556ef39a0d1f0ba3f81b814c45af962d0c9f3";
-
-		Map<String, String> arguments = new HashMap<String, String>();
-		// arguments.put("getInfo", "");
-		// low = -100;
-		// my info
-		// System.out.println(authenticatedHTTPRequest("getInfo", arguments));
-
-		// myactive orders
-		// System.out.println(authenticatedHTTPRequest("ActiveOrders",
-		// arguments));
-		
-		
+		/*
+		 * Put all market specific code 
+		 * onto one place so migration
+		 * can be done easaly
+		 */
+		factory = new BTCEFactory();
 		
 		
 		
@@ -123,6 +113,9 @@ public class BTC_e {
 		}
 		NetworkOptimizatorSingleton.getInstance();
 		JSONParsingOptimizationSingleton.getInstance();
+		
+		
+	 
 		
 		// tuning java
 				Properties props = System.getProperties();
@@ -162,12 +155,10 @@ public class BTC_e {
 			ReporterSingleton.roundAround = null;
 			ReporterSingleton.roundCurrency = "usd";
 			
-			// 
-			
-
 			// lets execute multithreading (get data from internet)
 
-			resources = getResources(numberOfNodes, valueMapping);
+		    resources = factory.updateResources(keyMapping);
+			//resources = getResources(numberOfNodes, valueMapping);
 			ReporterSingleton.resources = resources; // / this needs to be
 														// removed
 
@@ -452,8 +443,10 @@ public class BTC_e {
 							
 							System.out.println(ExplanationSingleton.explainCycleSolutionConfiguration(c.getSolutionConfiguration()));
 							
-							ReporterSingleton.highVolumeRound(c.getSolutionConfiguration().getValue(), valueMapping.get(i1), c.getSolutionConfiguration(), solverData);
+							factory.executeCycleOrders(c.getSolutionConfiguration());
 							
+							ReporterSingleton.highVolumeRound(c.getSolutionConfiguration().getValue(), valueMapping.get(i1), c.getSolutionConfiguration(), solverData);
+							break;
 						}
 						// System.out.print(valueMapping.get(i)+":"+new
 						// BigDecimal(calc[i]).toString());
@@ -486,7 +479,7 @@ public class BTC_e {
 		// number of threads == number of markets
 		
 		// ExecutorService executor = Executors.newCachedThreadPool();
-		
+
 		phaserBlockMainThread = new Phaser();
 		phaserBlockMainThread.register(); // register self (main thread)
 
@@ -714,11 +707,24 @@ public class BTC_e {
 		resources.put(1, 100.0); //
 		resources.put(2, 3511.10);
 		resources.put(3, 133.20);
-		resources.put(4, 4.44444);
+		resources.put(4, 7.44444);
 		resources.put(5, 7.39);
 		resources.put(6, 17.857);
 		resources.put(7, 17.69);
 
+		
+		
+//		resources.put(0, 0.0216);// btc
+//		resources.put(1, 10.0); //
+//		resources.put(2, 311.10);
+//		resources.put(3, 13.20);
+//		resources.put(4, 0.44444);
+//		resources.put(5, 0.739);
+//		resources.put(6, 1.857);
+//		resources.put(7, 1.69);
+
+		
+		
 		// make 5 of each // release -> set each to 0
 
 		// release -> invoke market get data set iterate and fill if not
@@ -825,126 +831,6 @@ public class BTC_e {
 		 */
 	}
 
-	/**
-	 * Execute a authenticated query on btc-e.
-	 * 
-	 * @param method
-	 *            The method to execute.
-	 * @param arguments
-	 *            The arguments to pass to the server.
-	 * 
-	 * @return The returned data as JSON or null, if the request failed.
-	 * 
-	 * @see http://pastebin.com/K25Nk2Sv
-	 */
-	public static final JSONObject authenticatedHTTPRequest(String method,
-			Map<String, String> arguments) {
-		_nonce = 5 + (long) (Math.random() * ((100000000 - 5) + 1));
-
-		HashMap<String, String> headerLines = new HashMap<String, String>(); // Create
-																				// a
-																				// new
-																				// map
-																				// for
-																				// the
-																				// header
-																				// lines.
-		Mac mac;
-		SecretKeySpec key = null;
-
-		if (arguments == null) { // If the user provided no arguments, just
-									// create an empty argument array.
-			arguments = new HashMap<String, String>();
-		}
-
-		arguments.put("method", method); // Add the method to the post data.
-		arguments.put("nonce", "" + _nonce); // Add the dummy nonce.
-
-		String postData = "";
-
-		for (Iterator argumentIterator = arguments.entrySet().iterator(); argumentIterator
-				.hasNext();) {
-			Map.Entry argument = (Map.Entry) argumentIterator.next();
-
-			if (postData.length() > 0) {
-				postData += "&";
-			}
-			postData += argument.getKey() + "=" + argument.getValue();
-		}
-
-		// Create a new secret key
-		try {
-			key = new SecretKeySpec(_secret.getBytes("UTF-8"), "HmacSHA512");
-		} catch (UnsupportedEncodingException uee) {
-			System.err.println("Unsupported encoding exception: "
-					+ uee.toString());
-			return null;
-		}
-
-		// Create a new mac
-		try {
-			mac = Mac.getInstance("HmacSHA512");
-		} catch (NoSuchAlgorithmException nsae) {
-			System.err.println("No such algorithm exception: "
-					+ nsae.toString());
-			return null;
-		}
-
-		// Init mac with key.
-		try {
-			mac.init(key);
-		} catch (InvalidKeyException ike) {
-			System.err.println("Invalid key exception: " + ike.toString());
-			return null;
-		}
-
-		// Add the key to the header lines.
-		headerLines.put("Key", _key);
-
-		// Encode the post data by the secret and encode the result as base64.
-		try {
-			headerLines.put("Sign", Hex.encodeHexString(mac.doFinal(postData
-					.getBytes("UTF-8"))));
-		} catch (UnsupportedEncodingException uee) {
-			System.err.println("Unsupported encoding exception: "
-					+ uee.toString());
-			return null;
-		}
-
-		// Now do the actual request
-		String requestResult = HttpUtils.httpPost("https://btc-e.com/tapi",
-				headerLines, postData);
-
-		if (requestResult != null) { // The request worked
-
-			try {
-				// Convert the HTTP request return value to JSON to parse
-				// further.
-				JSONObject jsonResult = JSONObject.fromObject(requestResult);
-
-				// Check, if the request was successful
-				int success = jsonResult.getInt("success");
-
-				if (success == 0) { // The request failed.
-					String errorMessage = jsonResult.getString("error");
-
-					System.err.println("btc-e.com trade API request failed: "
-							+ errorMessage);
-
-					return null;
-				} else { // Request succeeded!
-					return jsonResult.getJSONObject("return");
-				}
-
-			} catch (JSONException je) {
-				System.err.println("Cannot parse json request result: "
-						+ je.toString());
-
-				return null; // An error occured...
-			}
-		}
-
-		return null; // The request failed.
-	}
+	
 
 }

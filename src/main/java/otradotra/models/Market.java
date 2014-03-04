@@ -47,11 +47,15 @@ MarketOrderDataHolder getMeBestOrder(){
 	return orders[0];
 }
 
+
+
+// get inverse sell-ask buy-bid  for trader
 public String getMeTheType(){
+	// inverse to make 
 	if(type == MarketType.BID){
-		return "buy";
-	}else{
 		return "sell";
+	}else{
+		return "buy";
 	}
 }
 
