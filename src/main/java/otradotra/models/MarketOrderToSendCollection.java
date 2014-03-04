@@ -11,7 +11,7 @@ public class MarketOrderToSendCollection {
 	
 	public double totalNextNode; // this positive is important
 	// last one in arraylist will containt total balance after transactions 
-	
+	public String currency;
 	
 	
 	
@@ -20,6 +20,7 @@ public class MarketOrderToSendCollection {
 	public String pair;
 	public String type;
 	public double amount;
+	public double minMaxRate; // price to buy summed  rate
 
 	
 //	pair 	Yes 	pair 	btc_usd (example) 	-
@@ -29,6 +30,8 @@ public class MarketOrderToSendCollection {
 	
 	// trading information
 	// minMax Rate to put
-	public double minMaxRate; // price to buy summed 
+	
+	
+	
 	
 }

@@ -97,6 +97,20 @@ public class BTC_e {
 		factory = new BTCEFactory();
 		
 		
+//		BTCEFactory test = (BTCEFactory) factory;
+//		
+//		boolean go = true;
+//		try {
+//			test.nounceTest();
+//			//test.trade("ltc_usd", "sell", "15.284719", "0.108219");
+//		} catch (Exception e) {
+//			// TODO Auto-generated catch block
+//			e.printStackTrace();
+//		}
+//		while(go){
+//			
+//		}
+		
 		
 		// init setup
 		setup();
@@ -157,7 +171,12 @@ public class BTC_e {
 			
 			// lets execute multithreading (get data from internet)
 
-		    resources = factory.updateResources(keyMapping);
+		    Map<Integer,Double>res = factory.updateResources(keyMapping);
+		    
+		    if(res!=null){
+		    	resources=res;
+		    }
+		    
 			//resources = getResources(numberOfNodes, valueMapping);
 			ReporterSingleton.resources = resources; // / this needs to be
 														// removed
@@ -443,9 +462,16 @@ public class BTC_e {
 							
 							System.out.println(ExplanationSingleton.explainCycleSolutionConfiguration(c.getSolutionConfiguration()));
 							
+							if(factory.minimumAmountForTransaction(c.getSolutionConfiguration(), keyMapping)){
 							factory.executeCycleOrders(c.getSolutionConfiguration());
-							
 							ReporterSingleton.highVolumeRound(c.getSolutionConfiguration().getValue(), valueMapping.get(i1), c.getSolutionConfiguration(), solverData);
+							// need to exit this and move to the next
+							System.out.println(factory.resourcesCompare(resources, keyMapping, valueMapping));
+							
+							return;
+							}else{
+								System.out.println("volume too low - not trading");
+							}
 							break;
 						}
 						// System.out.print(valueMapping.get(i)+":"+new
@@ -744,47 +770,47 @@ public class BTC_e {
 		allMarkets = new MarketNameHelper[16];
 		// btc
 		allMarkets[0] = new MarketNameHelper("btc", "usd",
-				"https://btc-e.com/api/2/btc_usd/depth", 0.002);
+				"https://btc-e.com/api/2/btc_usd/depth", 0.002,3);
 		allMarkets[1] = new MarketNameHelper("btc", "rur",
-				"https://btc-e.com/api/2/btc_rur/depth", 0.002);
+				"https://btc-e.com/api/2/btc_rur/depth", 0.002,5);
 		allMarkets[2] = new MarketNameHelper("btc", "eur",
-				"https://btc-e.com/api/2/btc_eur/depth", 0.002);
+				"https://btc-e.com/api/2/btc_eur/depth", 0.002,5);
 
 		// ltc
 		allMarkets[3] = new MarketNameHelper("ltc", "btc",
-				"https://btc-e.com/api/2/ltc_btc/depth", 0.002);
+				"https://btc-e.com/api/2/ltc_btc/depth", 0.002,5);
 		allMarkets[4] = new MarketNameHelper("ltc", "usd",
-				"https://btc-e.com/api/2/ltc_usd/depth", 0.002);
+				"https://btc-e.com/api/2/ltc_usd/depth", 0.002,6);
 		allMarkets[5] = new MarketNameHelper("ltc", "rur",
-				"https://btc-e.com/api/2/ltc_rur/depth", 0.002);
+				"https://btc-e.com/api/2/ltc_rur/depth", 0.002,5);
 		allMarkets[6] = new MarketNameHelper("ltc", "eur",
-				"https://btc-e.com/api/2/ltc_eur/depth", 0.002);
+				"https://btc-e.com/api/2/ltc_eur/depth", 0.002,3);
 		// fiat
 
 		allMarkets[7] = new MarketNameHelper("usd", "rur",
-				"https://btc-e.com/api/2/usd_rur/depth", 0.005);
+				"https://btc-e.com/api/2/usd_rur/depth", 0.005,5);
 		allMarkets[8] = new MarketNameHelper("eur", "usd",
-				"https://btc-e.com/api/2/eur_usd/depth", 0.002);
+				"https://btc-e.com/api/2/eur_usd/depth", 0.002,5);
 
 		// nvc
 		allMarkets[9] = new MarketNameHelper("nvc", "btc",
-				"https://btc-e.com/api/2/nvc_btc/depth", 0.002);
+				"https://btc-e.com/api/2/nvc_btc/depth", 0.002,5);
 		allMarkets[10] = new MarketNameHelper("nvc", "usd",
-				"https://btc-e.com/api/2/nvc_usd/depth", 0.002);
+				"https://btc-e.com/api/2/nvc_usd/depth", 0.002,3);
 
 		// nmc
 		allMarkets[11] = new MarketNameHelper("nmc", "btc",
-				"https://btc-e.com/api/2/nmc_btc/depth", 0.002);
+				"https://btc-e.com/api/2/nmc_btc/depth", 0.002,5);
 		allMarkets[12] = new MarketNameHelper("nmc", "usd",
-				"https://btc-e.com/api/2/nmc_usd/depth", 0.002);
+				"https://btc-e.com/api/2/nmc_usd/depth", 0.002,3);
 		// ppc
 		allMarkets[13] = new MarketNameHelper("ppc", "btc",
-				"https://btc-e.com/api/2/ppc_btc/depth", 0.002);
+				"https://btc-e.com/api/2/ppc_btc/depth", 0.002,5);
 		allMarkets[14] = new MarketNameHelper("ppc", "usd",
-				"https://btc-e.com/api/2/ppc_usd/depth", 0.002);
+				"https://btc-e.com/api/2/ppc_usd/depth", 0.002,3);
 		
 		allMarkets[15] = new MarketNameHelper("eur", "rur",
-				"https://btc-e.com/api/2/eur_rur/depth", 0.005);
+				"https://btc-e.com/api/2/eur_rur/depth", 0.005,5);
 
 		/*
 		 * // rest vs btc - deadend not interesting allMarkets[17] = new
@@ -806,7 +832,7 @@ public class BTC_e {
 		for (int i = 0; i < allMarkets.length; i++) {
 			// create connector object - make preparation
 			connector[i] = new MarketJsonConnector(allMarkets[i].ask,
-					allMarkets[i].bid, allMarkets[i].transactionFee);
+					allMarkets[i].bid, allMarkets[i].transactionFee,allMarkets[i].maxDecimalPlaces);
 
 			// ask
 			if (!keyMapping.containsKey(allMarkets[i].ask)) {

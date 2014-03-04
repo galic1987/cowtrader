@@ -45,7 +45,7 @@ public class MarketJsonConnector {
 	
 
 	// constructor is final
-public MarketJsonConnector(String from, String to, double fee) {
+public MarketJsonConnector(String from, String to, double fee, int pricePrecisionDecimal) {
 		super();
 	    markets = new Market[2];
 	    objectMapper = new ObjectMapper();
@@ -56,6 +56,7 @@ public MarketJsonConnector(String from, String to, double fee) {
 	    markets[0].setFrom(from);
 	    markets[0].setTo(to);
 	    markets[0].setMarketName(from+"_"+to);
+	    markets[0].setPriceDecimalPrecision(pricePrecisionDecimal);
 
 
 	    
@@ -66,6 +67,7 @@ public MarketJsonConnector(String from, String to, double fee) {
 	    markets[1].setFrom(to); //### inverse
 	    markets[1].setTo(from);//### inverse
 	    markets[1].setMarketName(from+"_"+to);
+	    markets[1].setPriceDecimalPrecision(pricePrecisionDecimal);
 
 	    
 

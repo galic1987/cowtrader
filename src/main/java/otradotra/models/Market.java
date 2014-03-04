@@ -1,5 +1,6 @@
 package otradotra.models;
 
+import java.text.DecimalFormat;
 import java.util.Date;
 
 
@@ -41,6 +42,10 @@ public class Market {
 	
 	double transactionFee;
 
+	
+	private  DecimalFormat priceFormat = new DecimalFormat();
+
+	private int priceDecimalPrecision = 3;
 // returns best order bid-Lowest & ask-Highest
 MarketOrderDataHolder getMeBestOrder(){
 	// sorted ASK & BID
@@ -105,6 +110,23 @@ public Date getGotRequestFromServerDate() {
 
 public void setGotRequestFromServerDate(Date gotRequestFromServerDate) {
 	this.gotRequestFromServerDate = gotRequestFromServerDate;
+}
+
+public DecimalFormat getPriceFormat() {
+	return priceFormat;
+}
+
+public void setPriceFormat(DecimalFormat priceFormat) {
+	this.priceFormat = priceFormat;
+}
+
+public int getPriceDecimalPrecision() {
+	return priceDecimalPrecision;
+}
+
+public void setPriceDecimalPrecision(int priceDecimalPrecision) {
+	this.priceDecimalPrecision = priceDecimalPrecision;
+	priceFormat.setMaximumFractionDigits(priceDecimalPrecision);
 }
 
 // TODO:Needed 

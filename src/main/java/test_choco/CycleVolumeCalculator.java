@@ -436,13 +436,15 @@ public class CycleVolumeCalculator extends AbstractProblem {
 					calc[j] += totalBought; // next node
 					calcTo[j] += totalBought; // next node
 					marketOrderCollection.totalValueGot = totalBought;
-					
+					marketOrderCollection.amount = getTotalBuyWithAmount(tempOrders);
+
 					// trade data
 					marketOrderCollection.minMaxRate = getOrderPriceFor(marketOrderCollection);
 					marketOrderCollection.pair = tempOrders.get(0).getPair();
 					marketOrderCollection.type = tempOrders.get(0).getType();
-					marketOrderCollection.amount = totalBought;
 					
+					marketOrderCollection.currency = valueMapping.get(i); // used for min
+
 					
 
 					double totalBuyWith = getTotalBuyWith(tempOrders);
@@ -451,7 +453,10 @@ public class CycleVolumeCalculator extends AbstractProblem {
 					marketOrderCollection.totalNextNode = calc[j]; // important only last element
 					marketOrderCollection.resourcesAvailable = resources.get(i);
 					marketOrderCollection.resourcesBalance = marketOrderCollection.resourcesAvailable - marketOrderCollection.totalValueBy;
-				// .. end calculation
+				
+					
+
+					// .. end calculation
 					
 				// save the situation
 					totalOrders.add(marketOrderCollection);	
@@ -490,6 +495,23 @@ public class CycleVolumeCalculator extends AbstractProblem {
 	}
 	
 	
+	public double calculateBought(MarketOrderToSendCollection marketOrderCollection){
+		
+		double bought = 0;
+		if(marketOrderCollection.type.equals("buy")){
+			// buy this is simple 
+			bought = marketOrderCollection.totalValueGot;
+		}else{
+			// sell
+			bought = marketOrderCollection.totalValueGot;
+
+		
+		}
+		
+		return bought;
+	}
+	
+	
 	
 	/*
 	 * Algorithms for checking the max resources available
@@ -519,11 +541,7 @@ public class CycleVolumeCalculator extends AbstractProblem {
 		return true;
 	}
 	
-	private String whereIsShortage(CycleSolutionConfiguration cc,  Map<Integer, Double> availResource){
-		
-		
-		return "";
-	}
+
 	
 	
 	
@@ -626,18 +644,55 @@ public class CycleVolumeCalculator extends AbstractProblem {
 
 		int size = orders.size();
 		for(int i = 0; i<size; i++){
+			
+			if(orders.get(i).getType().equals("buy")){
 			total += orders.get(i).getTotal(); // total bought
+			}else{
+			total += orders.get(i).getTotal(); // total bought
+	
+			}
 		}
 		
 		return total;
 	}
 	
 	// when you buy something how much resources do you need 
+		private double getTotalBuyWithAmount(ArrayList<MarketOrderToSend> orders) {
+			double total = 0;
+			double l = 0;
+			int size = orders.size();
+			for(int i = 0; i<size; i++){
+				
+				if(orders.get(i).getType().equals("sell")){
+					total += orders.get(i).getAmount(); // total bought
+
+	
+				}else{
+						// addup transaction fee
+					double temp = orders.get(i).getTotal() + ( orders.get(i).getTotal() * orders.get(i).getMarket().getTransactionFee()) ;
+					total += temp; // total bought
+				 }
+				//total += orders.get(i).getAmount(); // amount of resources
+			}
+			
+			return total;
+		}
+	
+	// when you buy something how much resources do you need 
 	private double getTotalBuyWith(ArrayList<MarketOrderToSend> orders) {
 		double total = 0;
 		int size = orders.size();
 		for(int i = 0; i<size; i++){
-			total += orders.get(i).getAmount(); // amount of resources
+			total += orders.get(i).getAmount(); // total bought
+//			if(orders.get(i).getType().equals("buy")){
+//				total += orders.get(i).getAmount(); // total bought
+//				}else{
+//					// addup transaction fee
+//					double temp = orders.get(i).getTotal() + ( orders.get(i).getTotal() * orders.get(i).getMarket().getTransactionFee()) ;
+//				total += temp; // total bought
+//		
+//				}
+//			//total += orders.get(i).getAmount(); // amount of resources
 		}
 		
 		return total;
