@@ -83,7 +83,8 @@ public class BTC_e {
 	private static long [] endData;
 	
 	
-	
+	// caching optimizations
+	private static boolean didTradeLastRoundNeedNewResoucesCheck = false;
 	
 	
 	public static void main(String[] args) throws InterruptedException {
@@ -153,6 +154,7 @@ public class BTC_e {
 
 		
 
+		 printQuotes();
 		 
 		// set reporter mappings
 
@@ -171,11 +173,15 @@ public class BTC_e {
 			
 			// lets execute multithreading (get data from internet)
 
+			if(didTradeLastRoundNeedNewResoucesCheck || resources==null){
 		    Map<Integer,Double>res = factory.updateResources(keyMapping);
-		    
 		    if(res!=null){
 		    	resources=res;
+			    didTradeLastRoundNeedNewResoucesCheck=false;
 		    }
+			}
+			
+		    
 		    
 			//resources = getResources(numberOfNodes, valueMapping);
 			ReporterSingleton.resources = resources; // / this needs to be
@@ -255,9 +261,11 @@ public class BTC_e {
 	}
 
 	public static void tryCyclesEvaluation() {
-		boolean explain = false;
-
+ 
 		double[] calc = new double[solverData.length];
+		
+		//System.out.println(factory.resourcesCompare(resources, keyMapping, valueMapping));
+
 		double[] kol = new double[solverData.length];
 		double volumina = 1; // try volumina to spin
 
@@ -276,15 +284,15 @@ public class BTC_e {
 			Map<Integer, Integer> nodeMapping = problem.getSolutions()[cycleNumber];
 			Iterator it = nodeMapping.entrySet().iterator();
 			while (it.hasNext()) {
-				if(explain){
-				explanator = new StringBuffer();
-				explanator.append("############ ");
-				}
+				 
+				double transfee = 0;
+				double buyFromToFillVoluminaWithFee = 0;
 				
 				Map.Entry pairs = (Map.Entry) it.next();
 				// go throught full cycle beginning with actual node
 				int actualNode = (Integer) pairs.getKey();
-				volumina = resources.get(actualNode);
+				volumina = resources.get(actualNode)/10;
+				volumina = 100; // TODO: REMOVE THIS INVESTIGATE
 				for (int i = 0; i < calc.length; i++) {
 					calc[i] = 0;
 					kol[i] = 0;
@@ -297,105 +305,39 @@ public class BTC_e {
 					Market m = solverData[i][j];
 					//  calculation
 					if (calc[i] == 0) {
-						// System.out.println(m.type);
-						
-						// head explanation
-						if(explain){
-							explanator.append("("+m.getType()+")First buy with volumen "+volumina+"  ("+valueMapping.get(i)+")->("+valueMapping.get(j)+")\n");
-						}
+						 
 						double tempBuy = 0;
 						if (m.getType() == MarketType.BID) {
-							tempBuy = (m.getOrders()[0].price * volumina)
-									- (m.getOrders()[0].price * volumina * m
-											.getTransactionFee());
-							if(explain){
-								// formula explanation
-								explanator.append("calculation("+valueMapping.get(j)+") = (price("+valueMapping.get(j)+")*volumen("+valueMapping.get(i)+")) -"
-										+ "((price("+valueMapping.get(j)+") *volumen("+valueMapping.get(i)+") * fee("+m.getMarketName()+"))\n");
-								// concrete numbers
-								explanator.append("calculation("+valueMapping.get(j)+") = ("+m.getOrders()[0].price+"("+valueMapping.get(j)+") * "+volumina+"("+valueMapping.get(i)+")) -"
-										+ "(("+m.getOrders()[0].price+"("+valueMapping.get(j)+") *"+volumina+"("+valueMapping.get(i)+")) * "+m.getTransactionFee()+"("+m.getMarketName()+"))\n");
-								// concrete number at the end
-								explanator.append("Bought volume("+valueMapping.get(j)+") = "+tempBuy);
-								explanator.append("\n");
-								explanator.append(ExplanationSingleton.lastNOrdersFromMarket(5, m));
-
-							}
+							transfee = volumina -(volumina /(1+m.getTransactionFee()));
+							buyFromToFillVoluminaWithFee =  volumina - transfee;
+							tempBuy = (m.getOrders()[0].price * buyFromToFillVoluminaWithFee);
+ 				
+ 
 						} else {
-							tempBuy = (volumina / m.getOrders()[0].price)
-									- ((volumina / m.getOrders()[0].price) * m
-											.getTransactionFee());
-							
-							if(explain){
-								// formula explanation
-							explanator.append("calculation("+valueMapping.get(j)+") = (volumen("+valueMapping.get(i)+") / price("+valueMapping.get(j)+")) -"
-									+ "((volumen("+valueMapping.get(i)+") / price("+valueMapping.get(j)+")) * fee("+m.getMarketName()+"))\n");
-							// concrete numbers
-							explanator.append("calculation("+valueMapping.get(j)+") = ("+volumina+"("+valueMapping.get(i)+") / "+m.getOrders()[0].price+"("+valueMapping.get(j)+")) -"
-									+ "(("+volumina+"("+valueMapping.get(i)+") / "+m.getOrders()[0].price+"("+valueMapping.get(j)+")) * "+m.getTransactionFee()+"("+m.getMarketName()+"))\n");
-							// concrete number at the end
-							explanator.append("Bought volume("+valueMapping.get(j)+") = "+tempBuy+"\n");
-							explanator.append(ExplanationSingleton.lastNOrdersFromMarket(5, m));
-
-							}
+							transfee = volumina -(volumina /(1+m.getTransactionFee()));
+							buyFromToFillVoluminaWithFee =  volumina - transfee;
+							tempBuy = (buyFromToFillVoluminaWithFee / m.getOrders()[0].price);
 							
 						}
 
 						calc[j] += tempBuy;
-						// System.out.println("BUY:"
-						// +valueMapping.get(j)+" With "+volumina
-						// +" "+valueMapping.get(i)+" = " + tempBuy);
-
 						calc[i] -= volumina;
 
 					} else {
 						double tempBuy = 0;
 						
-						if(explain)explanator.append("("+m.getType()+") buy with volumen "+calc[i]+"  ("+valueMapping.get(i)+")->("+valueMapping.get(j)+")\n");
-
+ 
 						if (m.getType() == MarketType.BID) {
-							tempBuy = (m.getOrders()[0].price * calc[i])
-									- (m.getOrders()[0].price * calc[i] * m
-											.getTransactionFee());
-							if(explain){
-								// formula explanation
-							explanator.append("calculation("+valueMapping.get(j)+") = (price("+valueMapping.get(j)+")*volumen("+valueMapping.get(i)+")) -"
-									+ "((price("+valueMapping.get(j)+") *volumen("+valueMapping.get(i)+") * fee("+m.getMarketName()+"))\n");
-							// concrete numbers
-							explanator.append("calculation("+valueMapping.get(j)+") = ("+m.getOrders()[0].price+"("+valueMapping.get(j)+") * "+calc[i]+"("+valueMapping.get(i)+")) -"
-									+ "(("+m.getOrders()[0].price+"("+valueMapping.get(j)+") *"+calc[i]+"("+valueMapping.get(i)+")) * "+m.getTransactionFee()+"("+m.getMarketName()+"))\n");
-							// concrete number at the end
-							explanator.append("Bought volume("+valueMapping.get(j)+") = "+tempBuy);
-							explanator.append("\n");
-							explanator.append(ExplanationSingleton.lastNOrdersFromMarket(5, m));
-
-							}
+							transfee =  calc[i] -( calc[i] /(1+m.getTransactionFee()));
+							buyFromToFillVoluminaWithFee =   calc[i] - transfee;
+							tempBuy = (m.getOrders()[0].price * buyFromToFillVoluminaWithFee);
 						} else {
-							tempBuy = (calc[i] / m.getOrders()[0].price)
-									- ((calc[i] / m.getOrders()[0].price) * m
-											.getTransactionFee());
-							
-							if(explain){
-								// formula explanation
-							explanator.append("calculation("+valueMapping.get(j)+") = (volumen("+valueMapping.get(i)+") / price("+valueMapping.get(j)+")) -"
-									+ "((volumen("+valueMapping.get(i)+") / price("+valueMapping.get(j)+")) * fee("+m.getMarketName()+"))\n");
-							// concrete numbers
-							explanator.append("calculation("+valueMapping.get(j)+") = ("+calc[i]+"("+valueMapping.get(i)+") / "+m.getOrders()[0].price+"("+valueMapping.get(j)+")) -"
-									+ "(("+calc[i]+"("+valueMapping.get(i)+") / "+m.getOrders()[0].price+"("+valueMapping.get(j)+")) * "+m.getTransactionFee()+"("+m.getMarketName()+"))\n");
-							// concrete number at the end
-							explanator.append("Bought volume("+valueMapping.get(j)+") = "+tempBuy+"\n");
-							explanator.append(ExplanationSingleton.lastNOrdersFromMarket(5, m));
-
-							}
-
+							transfee = calc[i] -(calc[i] /(1+m.getTransactionFee()));
+							buyFromToFillVoluminaWithFee =  calc[i] - transfee;
+							tempBuy = (buyFromToFillVoluminaWithFee / m.getOrders()[0].price);
 						}
 
 						calc[j] += tempBuy;
-						// System.out.println("BUY:"
-						// +valueMapping.get(j)+" With "+calc[i]
-						// +" "+valueMapping.get(i)+" = " + tempBuy);
-
-						calc[i] = 0;
 						calc[i] -= calc[i];
 
 					}
@@ -418,12 +360,7 @@ public class BTC_e {
 					if (calc[testCount] > 0) {
 						t = true;
 
-						// System.out.println("Found soulution "+calc[i]);
-						if(explain){
-						explanator.append("############");
-						System.out.println(explanator.toString());
-						}
-
+		 
 						break;
 					} else {
 						// System.out.println("Found soulution "+calc[i]);
@@ -445,9 +382,13 @@ public class BTC_e {
 						// report every node higher than 0
 						if (calc[i1] > 0){
 							// report solution heuristic
-							CycleVolumeCalculator c = new CycleVolumeCalculator(solverData, 14, nodeMapping, valueMapping, resources,keyMapping);
+							
+							
+							
+ 							CycleVolumeCalculator c = new CycleVolumeCalculator(solverData, 14, nodeMapping, valueMapping, resources,keyMapping);
 							c.start();
 							
+							//if(c!=null)continue;
 							// here get max earnings from this cycle 
 							// TODO: c.getMax -> report to Reporter as value']
 							
@@ -460,6 +401,8 @@ public class BTC_e {
 							String g = valueMapping.get(i1);
 							String m = c.getSolutionConfiguration().getCurrency();
 							
+							
+							
 							System.out.println(ExplanationSingleton.explainCycleSolutionConfiguration(c.getSolutionConfiguration()));
 							
 							if(factory.minimumAmountForTransaction(c.getSolutionConfiguration(), keyMapping)){
@@ -467,7 +410,8 @@ public class BTC_e {
 							ReporterSingleton.highVolumeRound(c.getSolutionConfiguration().getValue(), valueMapping.get(i1), c.getSolutionConfiguration(), solverData);
 							// need to exit this and move to the next
 							System.out.println(factory.resourcesCompare(resources, keyMapping, valueMapping));
-							
+							didTradeLastRoundNeedNewResoucesCheck = true;
+
 							return;
 							}else{
 								System.out.println("volume too low - not trading");
@@ -588,7 +532,7 @@ public class BTC_e {
 
 					phaserBlockMainThread.arrive(); // say main thread finished
 					
-					long milis = 10 + (System.currentTimeMillis() % 50);
+					//long milis = 10 + (System.currentTimeMillis() % 100);
 
 					// System.out.println("--> Thread ending " + trans);
 					while(blockWorkerThreadsAtLoopEnd.get()){
@@ -597,10 +541,10 @@ public class BTC_e {
 							//Thread.sleep(System.currentTimeMillis() % 1000);
 							// put them wait in latch
 							
-							Thread.sleep(41);
+							Thread.sleep(7);
 						//	milis = (milis/2) +5;
 							
-						} catch (InterruptedException e) {
+						} catch (Exception e) {
 							// 
 							e.printStackTrace();
 						}
@@ -642,7 +586,7 @@ public class BTC_e {
 			// synchronize sleeping of threads to get paralell execution
 			//System.out.println(milis); 
 
-			Thread.sleep(150);
+			Thread.sleep(27);
 			
 
 		}; // wait for register
@@ -716,6 +660,34 @@ public class BTC_e {
 
 			}
 		}
+	}
+	
+	public static void printQuotes() {
+		System.out.print("   ");
+
+		for (int i = 0; i < solverData.length; i++) {
+			System.out.print(" " + valueMapping.get(i) + " ");
+		}
+
+		for (int i = 0; i < solverData.length; i++) {
+			System.out.println("");
+			System.out.print( "{");
+
+			for (int j = 0; j < solverData[i].length; j++) {
+				Market m = solverData[i][j];
+
+				// if(m != null)System.out.print(m.getFrom() + "->" + m.getTo()
+				// + " ");
+				if (m != null)
+					System.out.print(" "+m.getOrders()[0].volume+", ");
+				if (m == null)
+					System.out.print(" 0, ");
+
+			}
+			System.out.print( "},");
+
+		}
+
 	}
 
 	public static final Map<Integer, Double> getResources(

@@ -161,32 +161,7 @@ public class CycleVolumeCalculator extends AbstractProblem {
 */
 		solver.findAllSolutions();
 
-		// System.out.println(p.getNodeDepthTracker());
-
-		// calculate max - not needed 
-		/* Iterator it = p.getNodeDepthExplainer().entrySet().iterator();
-		while (it.hasNext()) {
-			Map.Entry pairs = (Map.Entry) it.next();
-			System.out.println(pairs.getKey() + " = " + pairs.getValue());
-
-			String marketName = (String) pairs.getValue();
-			Market marketObject = p.getNodeDepthMarket().get(pairs.getKey());
-
-			try {
-				int marketMax = p.getNodeDepthTracker().get(pairs.getKey());
-
-				double max = ExplanationSingleton
-						.lastNOrdersFromMarketCummulative(marketMax,
-								marketObject);
-
-				System.out.println("market name " + marketName + " "
-						+ marketObject.getMarketName() + " calc " + max);
-			} catch (Exception e) {
-				e.printStackTrace();
-			}
-			
-		}
-		*/
+ 
 		
 			// try to sell it with max starting with that current node
 			// find out best results
@@ -291,6 +266,11 @@ public class CycleVolumeCalculator extends AbstractProblem {
 				
 				CycleSolutionConfiguration cc = tempSolutions.get(i);
 				
+				boolean canIBuy = canIBuy(cc, resources);
+				if(!canIBuy){
+					continue;
+				}
+				
 				// get highest 
 				if(cc.getValueInBalancingCurrency() > highest){
 					highest = cc.getValueInBalancingCurrency();
@@ -303,31 +283,7 @@ public class CycleVolumeCalculator extends AbstractProblem {
 		
 		
 		
-		/*skip the hole
-		 * 
-		 * if(solutionBeginNode!=-1){
-		maxCyclesEvaluationDecision(solutionBeginNode,1);
-		for(int i=0;i<tempCalc.length;i++){
-			System.out.print(tempCalc[i] + " + ");
-		}
-		System.out.println("");
-		}
-		
-		*/
-		
-		
-//		if(solutionBeginNode!=-1){
-//			maxCyclesEvaluationDecision(solutionBeginNode,2);
-//			for(int i=0;i<tempCalc.length;i++){
-//				System.out.print(tempCalc[i] + " + ");
-//			}
-//			System.out.println("");
-//			}
-//
-		
-		/*
-		 * Calculate the hole
-		 */
+ 
 
 	}
 	
@@ -382,9 +338,12 @@ public class CycleVolumeCalculator extends AbstractProblem {
 
 		for (int i = 0; i < calc.length; i++) {
 			calc[i] = 0;
-			calcTo[i] = 0;
 		}
 
+		boolean cuttingResouces = false;
+		if(limitFirstToVolumeToTry){
+			cuttingResouces = true;
+		}
 		// count number of most involved nodes
 		// go throught cycle
 		Map<Integer, Integer> nodeMapping = cycle;
@@ -405,7 +364,8 @@ public class CycleVolumeCalculator extends AbstractProblem {
 		
 			// try with the maximum 
 			do {
-
+				
+			 
 				int i = actualNode; // actual node
 				int j = nodeMapping.get(actualNode); // next node
 				// actual market
@@ -416,11 +376,18 @@ public class CycleVolumeCalculator extends AbstractProblem {
 				MarketOrderToSendCollection marketOrderCollection = new MarketOrderToSendCollection();
 				
 				// calculation
-				if(limitFirstToVolumeToTry){
-					limitFirstToVolumeToTry = false; 
+				if(cuttingResouces){
+					cuttingResouces = false;
+					// TODO: cut to the resources
+					if(marketOrderCollection.resourcesBalance<=0){
+						// limit resources 
+						volumeToTry = ( (marketOrderCollection.resourcesBalance)+volumeToTry );
+						//marketOrderCollection.resourcesBalance = marketOrderCollection.resourcesBalance
+						// make hole for transaction fee
+						//volumeToTry = volumeToTry - (volumeToTry*marketOrderCollection.orders.get(0).getMarket().getTransactionFee());
+					}
 				}else{
 					volumeToTry = calc[i];
-
 				}
 					
 					if(volumeToTry == 0){
@@ -431,12 +398,13 @@ public class CycleVolumeCalculator extends AbstractProblem {
 					tempOrders = fillMaximumBuy(m, volumeToTry, maxDepth, bottelNeckRelaxing);
 					
 					marketOrderCollection.orders = tempOrders;
-
+					marketOrderCollection.maxDepth = maxDepth;
+					marketOrderCollection.currentDepth = tempOrders.size();
+					
+ 					// J
 					double totalBought = getTotalBought(tempOrders); // calculate one round more with 
 					calc[j] += totalBought; // next node
-					calcTo[j] += totalBought; // next node
 					marketOrderCollection.totalValueGot = totalBought;
-					marketOrderCollection.amount = getTotalBuyWithAmount(tempOrders);
 
 					// trade data
 					marketOrderCollection.minMaxRate = getOrderPriceFor(marketOrderCollection);
@@ -446,10 +414,13 @@ public class CycleVolumeCalculator extends AbstractProblem {
 					marketOrderCollection.currency = valueMapping.get(i); // used for min
 
 					
-
+					// I
 					double totalBuyWith = getTotalBuyWith(tempOrders);
-					calc[i] -= totalBuyWith;
-					marketOrderCollection.totalValueBy = totalBuyWith;
+					double totalBuyDeductionsIncludingFees = getTotalDeduction(tempOrders);
+
+					marketOrderCollection.amount = totalBuyWith;
+					calc[i] -= totalBuyDeductionsIncludingFees;
+					marketOrderCollection.totalValueBy = totalBuyDeductionsIncludingFees;
 					marketOrderCollection.totalNextNode = calc[j]; // important only last element
 					marketOrderCollection.resourcesAvailable = resources.get(i);
 					marketOrderCollection.resourcesBalance = marketOrderCollection.resourcesAvailable - marketOrderCollection.totalValueBy;
@@ -478,7 +449,11 @@ public class CycleVolumeCalculator extends AbstractProblem {
 				if(tempCalc[i]<0){
 					//solution = i;
 					//System.out.println("no Solution" + tempCalc[i]);
-					return null;
+					if(limitFirstToVolumeToTry){
+						return null;
+					}else{
+						return null;
+					}
 				}
 				
 				if(tempCalc[i]>0){
@@ -486,6 +461,9 @@ public class CycleVolumeCalculator extends AbstractProblem {
 					//solution = startNode;
 				}
 			}		
+			
+			
+			
 			
 			// special case if everything == 0
 			if(!solution)return null;
@@ -495,21 +473,7 @@ public class CycleVolumeCalculator extends AbstractProblem {
 	}
 	
 	
-	public double calculateBought(MarketOrderToSendCollection marketOrderCollection){
-		
-		double bought = 0;
-		if(marketOrderCollection.type.equals("buy")){
-			// buy this is simple 
-			bought = marketOrderCollection.totalValueGot;
-		}else{
-			// sell
-			bought = marketOrderCollection.totalValueGot;
 
-		
-		}
-		
-		return bought;
-	}
 	
 	
 	
@@ -562,21 +526,37 @@ public class CycleVolumeCalculator extends AbstractProblem {
 		
 		// order.setMarket(m);
 		// order.setAmount(amount);
-
+		double tempBuy = 0;
+		double transfee = 0;
+		double buyFromToFillVoluminaWithFee = 0;
+		
 		if (incomingVolume == 0) {
 			// maxBuy this is begin
 			// do it for every single one
 			// relaxing optimization widen the bottelneck
 			for (int i = 0; i <= maxDepthOrderProfitable + relaxingTheBottelneck; i++) {
 				MarketOrderToSend orderTemp = new MarketOrderToSend();
-				orderTemp.setAmount(m.getOrders()[i].volume);
+				// TODO: transaction fee 
+				
+				if(m.getType() == MarketType.BID){
+					transfee = m.getOrders()[i].volume -((m.getOrders()[i].volume /(1+m.getTransactionFee())));
+					buyFromToFillVoluminaWithFee =  (m.getOrders()[i].volume - transfee);
+					tempBuy = (m.getOrders()[0].price * buyFromToFillVoluminaWithFee);
+				}else{
+					transfee = m.getOrders()[i].volume -(m.getOrders()[i].volume /(1+m.getTransactionFee()));
+					buyFromToFillVoluminaWithFee =  m.getOrders()[i].volume - transfee;
+					tempBuy = (buyFromToFillVoluminaWithFee / m.getOrders()[0].price);
+				}
+				
+				orderTemp.setAmount(buyFromToFillVoluminaWithFee);
 				orderTemp.setRate(m.getOrders()[i].price);
 				orderTemp.setType(m.getMeTheType());
 				orderTemp.setPair(m.getMarketName());
 				orderTemp.setMarket(m); 
-				orderTemp.setOrderDepth(i);				
+				orderTemp.setOrderDepth(i);		
+				orderTemp.setFeeOnAmount(transfee); 
 				orders.add(orderTemp);
-				orderTemp.recalculate();
+				orderTemp.setTotal(tempBuy);
 			}
 
 		} else {
@@ -607,26 +587,51 @@ public class CycleVolumeCalculator extends AbstractProblem {
 				if(percentageFilled <= 1){
 					// smaller than  (100%) , fill the full order
 					MarketOrderToSend orderTemp = new MarketOrderToSend();
-					orderTemp.setAmount(m.getOrders()[i].volume);
+					
+					if(m.getType() == MarketType.BID){
+						transfee = m.getOrders()[i].volume -((m.getOrders()[i].volume /(1+m.getTransactionFee())));
+						buyFromToFillVoluminaWithFee =  (m.getOrders()[i].volume - transfee);
+						tempBuy = (m.getOrders()[0].price * buyFromToFillVoluminaWithFee);
+					}else{
+						transfee = m.getOrders()[i].volume -(m.getOrders()[i].volume /(1+m.getTransactionFee()));
+						buyFromToFillVoluminaWithFee =  m.getOrders()[i].volume - transfee;
+						tempBuy = (buyFromToFillVoluminaWithFee / m.getOrders()[0].price);
+					}
+					
+					orderTemp.setAmount(buyFromToFillVoluminaWithFee);
 					orderTemp.setRate(m.getOrders()[i].price);
 					orderTemp.setType(m.getMeTheType());
 					orderTemp.setPair(m.getMarketName());
 					orderTemp.setMarket(m);
 					orderTemp.setOrderDepth(i);
-					orderTemp.recalculate();
+					orderTemp.setTotal(tempBuy);
+					//orderTemp.recalculate();
 					orders.add(orderTemp);
-					volumeLeft = volumeLeft - m.getOrders()[i].volume;
+					orderTemp.setFeeOnAmount(transfee); 
+					volumeLeft = volumeLeft - buyFromToFillVoluminaWithFee;
 				}else{
 					// bigger than it is too much need to cut it 
 					double maxVolumeToTheEnd = getMaxOfOrder(m.getOrders()[i],volumeLeft);
 					MarketOrderToSend orderTemp = new MarketOrderToSend();
-					orderTemp.setAmount(maxVolumeToTheEnd);
+					
+					if(m.getType() == MarketType.BID){
+						transfee = maxVolumeToTheEnd -((maxVolumeToTheEnd /(1+m.getTransactionFee())));
+						buyFromToFillVoluminaWithFee =  (maxVolumeToTheEnd - transfee);
+						tempBuy = (m.getOrders()[0].price * buyFromToFillVoluminaWithFee);
+					}else{
+						transfee = maxVolumeToTheEnd -(maxVolumeToTheEnd /(1+m.getTransactionFee()));
+						buyFromToFillVoluminaWithFee =  maxVolumeToTheEnd - transfee;
+						tempBuy = (buyFromToFillVoluminaWithFee / m.getOrders()[0].price);
+					}
+					
+					orderTemp.setAmount(buyFromToFillVoluminaWithFee);
 					orderTemp.setRate(m.getOrders()[i].price);
 					orderTemp.setType(m.getMeTheType());
 					orderTemp.setPair(m.getMarketName());
 					orderTemp.setMarket(m);
 					orderTemp.setOrderDepth(i);
-					orderTemp.recalculate();
+					orderTemp.setTotal(tempBuy);
+					orderTemp.setFeeOnAmount(transfee); 
 					orders.add(orderTemp);
 					volumeLeft = volumeLeft - maxVolumeToTheEnd;
 				}
@@ -656,47 +661,42 @@ public class CycleVolumeCalculator extends AbstractProblem {
 		return total;
 	}
 	
-	// when you buy something how much resources do you need 
-		private double getTotalBuyWithAmount(ArrayList<MarketOrderToSend> orders) {
-			double total = 0;
-			double l = 0;
-			int size = orders.size();
-			for(int i = 0; i<size; i++){
-				
-				if(orders.get(i).getType().equals("sell")){
-					total += orders.get(i).getAmount(); // total bought
 
-	
-				}else{
-						// addup transaction fee
-					double temp = orders.get(i).getTotal() + ( orders.get(i).getTotal() * orders.get(i).getMarket().getTransactionFee()) ;
-					total += temp; // total bought
-				 }
-				//total += orders.get(i).getAmount(); // amount of resources
-			}
-			
-			return total;
-		}
 	
 	// when you buy something how much resources do you need 
 	private double getTotalBuyWith(ArrayList<MarketOrderToSend> orders) {
 		double total = 0;
 		int size = orders.size();
 		for(int i = 0; i<size; i++){
-			total += orders.get(i).getAmount(); // total bought
-//			if(orders.get(i).getType().equals("buy")){
-//				total += orders.get(i).getAmount(); // total bought
+//				if(orders.get(i).getType().equals("buy")){
+					total += orders.get(i).getAmount(); // total bought
 //				}else{
 //					// addup transaction fee
-//					double temp = orders.get(i).getTotal() + ( orders.get(i).getTotal() * orders.get(i).getMarket().getTransactionFee()) ;
-//				total += temp; // total bought
-//		
+//					total += orders.get(i).getTotal() ;
 //				}
-//			//total += orders.get(i).getAmount(); // amount of resources
 		}
 		
 		return total;
 	}
+	
+	
+	
+	private double getTotalDeduction(ArrayList<MarketOrderToSend> orders) {
+		double total = 0;
+		int size = orders.size();
+		for(int i = 0; i<size; i++){
+//				if(orders.get(i).getType().equals("buy")){
+					total += orders.get(i).getAmount()+orders.get(i).getFeeOnAmount(); // total bought
+//				}else{
+//					// addup transaction fee
+//					total += orders.get(i).getTotal() ;
+//				}
+		}
+		
+		return total;
+	}
+	
+	
 	
 	
 	/*

@@ -182,10 +182,8 @@ public class OrderDepthPropagator  extends  Propagator<IntVar> {
 			Map<Integer, Integer> nodeMapping = cycle;
 			Iterator it = nodeMapping.entrySet().iterator();
 			while (it.hasNext()) {
-				if(explain){
-				explanator = new StringBuffer();
-				explanator.append("############ ");
-				}
+				 
+				
 				
 				Map.Entry pairs = (Map.Entry) it.next();
 				// go throught full cycle beginning with actual node
@@ -199,6 +197,10 @@ public class OrderDepthPropagator  extends  Propagator<IntVar> {
 
 				
 				do {
+					
+					double transfee = 0;
+					double buyFromToFillVoluminaWithFee = 0;
+					
 					int i = actualNode; // actual node
 					int j = nodeMapping.get(actualNode); // next node
 					
@@ -216,120 +218,90 @@ public class OrderDepthPropagator  extends  Propagator<IntVar> {
 					//  calculation
 					if (calc[i] == 0) {
 						// head explanation
-						if(explain){
-							explanator.append("("+m.getType()+")First buy with volumen "+volumina+"  ("+valueMapping.get(i)+")->("+valueMapping.get(j)+")\n");
-						}
+						 
 						double tempBuy = 0;
 						if (m.getType() == MarketType.BID) {
 							
 							///1. BEGIN start node BID
-							tempBuy = (m.getOrders()[orderDepth[nodeCounter]].price * volumina) // calc
-									- (m.getOrders()[orderDepth[nodeCounter]].price * volumina * m
-											.getTransactionFee());
+//							tempBuy = (m.getOrders()[orderDepth[nodeCounter]].price * volumina) // calc
+//									- (m.getOrders()[orderDepth[nodeCounter]].price * volumina * m
+//											.getTransactionFee());    
+							
+							transfee = volumina -(volumina /(1+m.getTransactionFee()));
+							buyFromToFillVoluminaWithFee =  volumina - transfee;
+							tempBuy = (m.getOrders()[orderDepth[nodeCounter]].price * buyFromToFillVoluminaWithFee);
+							
 							// cumulative calc
 							for(int cumCounter = -1; cumCounter<orderDepth[nodeCounter];cumCounter++){
 							cummulativeToStep[i] += m.getOrders()[orderDepth[nodeCounter]].volume;
 							}
 							
-							if(explain){
-								// formula explanation
-								explanator.append("calculation("+valueMapping.get(j)+") = (price("+valueMapping.get(j)+")*volumen("+valueMapping.get(i)+")) -"
-										+ "((price("+valueMapping.get(j)+") *volumen("+valueMapping.get(i)+") * fee("+m.getMarketName()+"))\n");
-								// concrete numbers
-								explanator.append("calculation("+valueMapping.get(j)+") = ("+m.getOrders()[orderDepth[nodeCounter]].price+"("+valueMapping.get(j)+") * "+volumina+"("+valueMapping.get(i)+")) -"
-										+ "(("+m.getOrders()[orderDepth[nodeCounter]].price+"("+valueMapping.get(j)+") *"+volumina+"("+valueMapping.get(i)+")) * "+m.getTransactionFee()+"("+m.getMarketName()+"))\n");
-								// concrete number at the end
-								explanator.append("Bought volume("+valueMapping.get(j)+") = "+tempBuy);
-								explanator.append("\n");
-								explanator.append(ExplanationSingleton.lastNOrdersFromMarket(5, m));
-
-							}
+							 
 						} else {
 							///2. BEGIN start node ASK
 							
 							
-							tempBuy = (volumina / m.getOrders()[orderDepth[nodeCounter]].price)
-									- ((volumina / m.getOrders()[orderDepth[nodeCounter]].price) * m
-											.getTransactionFee());
+//							tempBuy = (volumina / m.getOrders()[orderDepth[nodeCounter]].price)
+//									- ((volumina / m.getOrders()[orderDepth[nodeCounter]].price) * m
+//											.getTransactionFee());
+							
+							transfee = volumina -(volumina /(1+m.getTransactionFee()));
+							buyFromToFillVoluminaWithFee =  volumina - transfee;
+							tempBuy = (buyFromToFillVoluminaWithFee / m.getOrders()[orderDepth[nodeCounter]].price);
+							
+							
 							// cumulative calc
 							for(int cumCounter = -1; cumCounter<orderDepth[nodeCounter];cumCounter++){
 							cummulativeToStep[i] += m.getOrders()[orderDepth[nodeCounter]].volume;
 							}
 							
-							if(explain){
-								// formula explanation
-							explanator.append("calculation("+valueMapping.get(j)+") = (volumen("+valueMapping.get(i)+") / price("+valueMapping.get(j)+")) -"
-									+ "((volumen("+valueMapping.get(i)+") / price("+valueMapping.get(j)+")) * fee("+m.getMarketName()+"))\n");
-							// concrete numbers
-							explanator.append("calculation("+valueMapping.get(j)+") = ("+volumina+"("+valueMapping.get(i)+") / "+m.getOrders()[orderDepth[nodeCounter]].price+"("+valueMapping.get(j)+")) -"
-									+ "(("+volumina+"("+valueMapping.get(i)+") / "+m.getOrders()[orderDepth[nodeCounter]].price+"("+valueMapping.get(j)+")) * "+m.getTransactionFee()+"("+m.getMarketName()+"))\n");
-							// concrete number at the end
-							explanator.append("Bought volume("+valueMapping.get(j)+") = "+tempBuy+"\n");
-							explanator.append(ExplanationSingleton.lastNOrdersFromMarket(5, m));
-
-							}
+							 
 							
 						}
 
 						calc[j] += tempBuy;
-						// System.out.println("BUY:"
-						// +valueMapping.get(j)+" With "+volumina
-						// +" "+valueMapping.get(i)+" = " + tempBuy);
-
 						calc[i] -= volumina;
 
 					} else {
 						double tempBuy = 0;
 						
-						if(explain)explanator.append("("+m.getType()+") buy with volumen "+calc[i]+"  ("+valueMapping.get(i)+")->("+valueMapping.get(j)+")\n");
-
+ 
 						if (m.getType() == MarketType.BID) {
 							///3. Further node BID
 
-							tempBuy = (m.getOrders()[orderDepth[nodeCounter]].price * calc[i])
-									- (m.getOrders()[orderDepth[nodeCounter]].price * calc[i] * m
-											.getTransactionFee());
+//							tempBuy = (m.getOrders()[orderDepth[nodeCounter]].price * calc[i])
+//									- (m.getOrders()[orderDepth[nodeCounter]].price * calc[i] * m
+//											.getTransactionFee());
+							
+							
+							transfee =  calc[i] -( calc[i] /(1+m.getTransactionFee()));
+							buyFromToFillVoluminaWithFee =   calc[i] - transfee;
+							tempBuy = (m.getOrders()[orderDepth[nodeCounter]].price * buyFromToFillVoluminaWithFee);
+							
+							
 							// cumulative calc
 							for(int cumCounter = -1; cumCounter<orderDepth[nodeCounter];cumCounter++){
 							cummulativeToStep[i] += m.getOrders()[orderDepth[nodeCounter]].volume;
 							}
-							if(explain){
-								// formula explanation
-							explanator.append("calculation("+valueMapping.get(j)+") = (price("+valueMapping.get(j)+")*volumen("+valueMapping.get(i)+")) -"
-									+ "((price("+valueMapping.get(j)+") *volumen("+valueMapping.get(i)+") * fee("+m.getMarketName()+"))\n");
-							// concrete numbers
-							explanator.append("calculation("+valueMapping.get(j)+") = ("+m.getOrders()[orderDepth[nodeCounter]].price+"("+valueMapping.get(j)+") * "+calc[i]+"("+valueMapping.get(i)+")) -"
-									+ "(("+m.getOrders()[orderDepth[nodeCounter]].price+"("+valueMapping.get(j)+") *"+calc[i]+"("+valueMapping.get(i)+")) * "+m.getTransactionFee()+"("+m.getMarketName()+"))\n");
-							// concrete number at the end
-							explanator.append("Bought volume("+valueMapping.get(j)+") = "+tempBuy);
-							explanator.append("\n");
-							explanator.append(ExplanationSingleton.lastNOrdersFromMarket(5, m));
-
-							}
+							 
 						} else {
 							///4. Further node ASK
 
-							tempBuy = (calc[i] / m.getOrders()[orderDepth[nodeCounter]].price)
-									- ((calc[i] / m.getOrders()[orderDepth[nodeCounter]].price) * m
-											.getTransactionFee());
+//							tempBuy = (calc[i] / m.getOrders()[orderDepth[nodeCounter]].price)
+//									- ((calc[i] / m.getOrders()[orderDepth[nodeCounter]].price) * m
+//											.getTransactionFee());
+							
+							
+							transfee = calc[i] -(calc[i] /(1+m.getTransactionFee()));
+							buyFromToFillVoluminaWithFee =  calc[i] - transfee;
+							tempBuy = (buyFromToFillVoluminaWithFee / m.getOrders()[orderDepth[nodeCounter]].price);
 							
 							// cumulative calc
 							for(int cumCounter = -1; cumCounter<orderDepth[nodeCounter];cumCounter++){
 							cummulativeToStep[i] += m.getOrders()[orderDepth[nodeCounter]].volume;
 							}
 							
-							if(explain){
-								// formula explanation
-							explanator.append("calculation("+valueMapping.get(j)+") = (volumen("+valueMapping.get(i)+") / price("+valueMapping.get(j)+")) -"
-									+ "((volumen("+valueMapping.get(i)+") / price("+valueMapping.get(j)+")) * fee("+m.getMarketName()+"))\n");
-							// concrete numbers
-							explanator.append("calculation("+valueMapping.get(j)+") = ("+calc[i]+"("+valueMapping.get(i)+") / "+m.getOrders()[orderDepth[nodeCounter]].price+"("+valueMapping.get(j)+")) -"
-									+ "(("+calc[i]+"("+valueMapping.get(i)+") / "+m.getOrders()[orderDepth[nodeCounter]].price+"("+valueMapping.get(j)+")) * "+m.getTransactionFee()+"("+m.getMarketName()+"))\n");
-							// concrete number at the end
-							explanator.append("Bought volume("+valueMapping.get(j)+") = "+tempBuy+"\n");
-							explanator.append(ExplanationSingleton.lastNOrdersFromMarket(5, m));
-
-							}
+							 
 
 						}
 
@@ -339,7 +311,7 @@ public class OrderDepthPropagator  extends  Propagator<IntVar> {
 						// +" "+valueMapping.get(i)+" = " + tempBuy);
 
 						// TODO: calculation
-						calc[i] = 0;
+						calc[i] -= calc[i];
 						//calc[i] -= calc[i];
 
 					}
@@ -363,10 +335,7 @@ public class OrderDepthPropagator  extends  Propagator<IntVar> {
 					if (calc[testCount] > 0) {
 						t = true;
 						// System.out.println("Found soulution "+calc[i]);
-						if(explain){
-						explanator.append("############");
-						System.out.println(explanator.toString());
-						}
+						 
 						return calc[testCount];
 
 						//break;

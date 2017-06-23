@@ -66,88 +66,38 @@ private static ArrayList<MarketTraderKey> marketTraders = new ArrayList<MarketTr
 
 	public BTCEFactory (){
 		// 0. Market connection data
-//		_key = "EWEZMRO1-GLWSOJ4E-XRHPKABY-F2TO4FU4-JZ2DCE3R";
+//		_key = "EWEZMRO1-GLWSOJ4E-XRHPKABY-F2TO4FU4-JZ2DCE3R"
 //		_secret = "64cb9bef1ece72d589b4a08b8b293f1b4622b0e7d4bac2cff616731a8d7386b1";
 	    objectMapper = new ObjectMapper();
 	    df.setMaximumFractionDigits(7);
 		df.setGroupingUsed(false);
 		
-		marketTraders.add(new MarketTraderKey("EWEZMRO1-GLWSOJ4E-XRHPKABY-F2TO4FU4-JZ2DCE3R", "64cb9bef1ece72d589b4a08b8b293f1b4622b0e7d4bac2cff616731a8d7386b1", "traderTest"));
-		marketTraders.add(new MarketTraderKey("LK52LJCU-SIOOYQQ5-HMYUZHW3-6BKQW52W-RG8RW9JM", "a515fcfa988b0f019287c35c94ddcd22f334f806037d0783a2d980f8ec4b6972", "jedan"));
-		marketTraders.add(new MarketTraderKey("ZBFZPZJS-IP25TLPI-N2QES1VO-YCOJPFRP-JZTKD1MV", "5cfa491624000853f6f4aea85a9550b7eb15ce22b4f3d7456c04d9cea3989835", "dva"));
-		marketTraders.add(new MarketTraderKey("G0W1WIJT-YNM81M4L-1KEJOLSP-WSWU7Q1T-5ZQ8U08H", "7d076d0c4812dee1d1f69fbb7727817e8ec30b1f0db650397c07c8df5a171785", "tri"));
-		marketTraders.add(new MarketTraderKey("V29WSSS7-DXQZXASR-ZDAJ1BIJ-6OPI6B60-Y3GDPRVZ", "58137e63917e96d2125ac5a70751ee727081faca04de6ca519cc92dd6ce14aa6", "cetiri"));
-		marketTraders.add(new MarketTraderKey("5N7ZNKMH-3KNT6BKX-XOB3WAG3-0B9G2V26-YUQ0M3GN", "9f2411b6da10cabf2edf18e809794158d57094fafbd2f3f9d327208f8a8728eb", "pet"));
-		marketTraders.add(new MarketTraderKey("30DVV0BS-A9XGUUP1-FDV6WEOD-IL1R9KGC-DA526UTX", "21e70552183bfe95cf9561b59cdf774b5328563b3c7f5b6053b21cc13f29d8dc", "sest"));
-		marketTraders.add(new MarketTraderKey("11IUPTL1-X778ISLH-FBBRLLGG-W1X4HHTC-P4VL2XA3", "880ad6ae2c9aec2a781dd3c7d7c4a62ff19cd2678c05e9e2a038fb62b3e59605", "sedam"));
-
+		marketTraders.add(new MarketTraderKey("WXV11V8X-6AKJQ6FU-6FWOTPBZ-SWF6ZB04-FG1JUVVV", 
+				"74f80949085afaa1947f786eada35d94f1f493ee4ee3d1bcb1779162b7f17de3", 
+				"1",1301893455l));
+		marketTraders.add(new MarketTraderKey("JGFW22YB-2V95KSC7-R5KITLE1-Q41VVYHQ-HYCKLPZ5", 
+				"b6cf8e526244a9b0c9821312e86d69b349b32702c220c240bc81a8375ad97669", 
+				"2",1301893451l));
+		marketTraders.add(new MarketTraderKey("WYYZM7XM-LIVQGZU1-QVIDSD7Q-PE8VFGF7-UK2LF1YS", 
+				"ca12bbcca569edcc70b17ed251ccb0e3505824da30bcc3cccc4dc82f6a39e34a", 
+				"3",1301893451l));
+		marketTraders.add(new MarketTraderKey("DRL4HPGC-Q5TFU0LQ-FP11B36N-BQ2K0JDG-8C84JSVR", 
+				"07aa675e80b6b073de643d72f55338fb5fd3e6ae6c963409f1c7c976dd484446", 
+				"4",1301893451l));
+		marketTraders.add(new MarketTraderKey("NFOYKQKI-0RSSIC8L-4GOCY4CE-UT0DO9WC-DYZX6WF2", 
+				"1dbfab94c23f40abe475cb9629fed20efa3a3913fc8b4694a32a057c7fb5e4b4", 
+				"5",1301893451l));
+		marketTraders.add(new MarketTraderKey("8E8XVNYT-PBRO40RA-L92L235Z-9IU9PHDQ-WS5VQO2F", 
+				"d36062e0ee6f237ae87b35762e82f8264e3af5910a471beccb3b6f226354bf1f", 
+				"6",1301893451l));
+		marketTraders.add(new MarketTraderKey("HW0TPXA2-SFJGN6G5-DZ014AYE-HUSO2IXS-M9JG7KZM", 
+				"84af505a230d22418b40469db469b88b82c0462ca41470ede1b3b76f214b347c", 
+				"7",1301893451l));
+		marketTraders.add(new MarketTraderKey("VR8OFKGX-XPOAJ2HM-KL6OAXC9-1BOTZA8C-X30Q917B", 
+				"a6c3bfe231ed6fb1892f1868138b5a25ddf983d3e182451f3bc897d0e35eecce", 
+				"8",1301893451l));
+		
 	} 
-	
-	
-	
-	
-	
-//	public String nounceTest() {
-//		// TODO Auto-generated method stub
-//
-//		// build order and return
-//		 executor = Executors.newFixedThreadPool(7);
-//
-//		for(int i =0;i<7;i++){
-//			final MarketTraderKey mkey = marketTraders.get(i); 
-//			
-//			// TODO: arrayoutofbounds exception
-//
-//			executor.execute(new Runnable() {
-//				public void run() {
-//					//sendTemp.minMaxRate;
-//					
-//					try {
-//						Map<String, String> arguments = new HashMap<String, String>();
-//						arguments.put("getInfo", "");
-//						String info = apacheHttpPost(_urlApi,arguments, "getInfo",mkey.getKey(),mkey.getSecret());
-//
-//						System.out.println(mkey.getName()+" _ "+info);
-//
-//					} catch (Exception e) {
-//						// TODO Auto-generated catch block
-//						e.printStackTrace();
-//					}
-//				}
-//			});
-//			
-//		}
-//		
-//		executor.shutdown();
-//		try {
-//		if (executor.awaitTermination(9000, TimeUnit.MILLISECONDS)) {
-//			// all threads good
-////			Map<String, String> arguments = new HashMap<String, String>();
-////			arguments.put("getInfo", "");
-////			String info = apacheHttpPost(_urlApi,arguments, "getInfo");
-////			
-//		} else {
-//			// timeout occured 
-// 
-//		}
-//		} catch (Exception e) {
-//
-//		}
-//		
-//		
-//		
-//
-//		return null;
-//	}
-	
-	
-	
-	
-	
-	
-	
-	
-	
 	
 	
 
@@ -175,7 +125,7 @@ private static ArrayList<MarketTraderKey> marketTraders = new ArrayList<MarketTr
 						 * price tolerance to sell , not to get stuck
 						 */
 						double priceTolerance = 0;
-						double tolerance = 0.005; // 0.5% Tolerance
+						double tolerance = 0.000; // 0.5% Tolerance
 						
 						if(marketOrder.type.equals("sell")){
 							// sell bring down the price 
@@ -190,10 +140,16 @@ private static ArrayList<MarketTraderKey> marketTraders = new ArrayList<MarketTr
 						/*
 						 * amount tolerance to sell , not to get rejected
 						 */						
-						double amount = marketOrder.amount;
+						double amount =0;
+						
+						if(marketOrder.type.equals("sell")){
+							amount= marketOrder.amount;
+						}else{
+							amount= marketOrder.totalValueGot;
+						}
 						
 						if(marketOrder.resourcesAvailable<0.0001){
-							amount = amount - (marketOrder.amount * marketOrder.orders.get(0).getMarket().getTransactionFee() * 1.0001);
+							amount = amount - (amount * marketOrder.orders.get(0).getMarket().getTransactionFee() * 1.0001);
 						}
 						
 						
@@ -226,20 +182,11 @@ private static ArrayList<MarketTraderKey> marketTraders = new ArrayList<MarketTr
 
 		}
 		
-		
-		
-
 		return null;
 	}
 	
 	
-
-//	pair 	Yes 	pair 	btc_usd (example) 	-
-//	type 	Yes 	The transaction type 	buy or sell 	-
-//	rate 	Yes 	The rate to buy/sell 	numerical 	-
-//	amount
-	
-	public String trade(String pair, String type, String rate, String amount, MarketTraderKey mkey) throws Exception{
+ public String trade(String pair, String type, String rate, String amount, MarketTraderKey mkey) throws Exception{
 		Map<String, String> arguments = new HashMap<String, String>();
 		//arguments.put("Trade", "");
 		arguments.put("pair", pair);
@@ -247,10 +194,11 @@ private static ArrayList<MarketTraderKey> marketTraders = new ArrayList<MarketTr
 		arguments.put("rate", rate);
 		arguments.put("amount",amount);
 
-		String info = apacheHttpPost(_urlApi,arguments, "Trade",mkey.getKey(),mkey.getSecret());
-		System.out.println(info);
+		String info = "Trade offlineC";
+				//apacheHttpPost(_urlApi,arguments, "Trade",mkey.getKey(),mkey.getSecret());
+		//System.out.println(info);
 		System.out.println(arguments);
-		return info;
+		return info; // info return 
 	}
 	
 	// returns true if ok 
@@ -288,8 +236,8 @@ private static ArrayList<MarketTraderKey> marketTraders = new ArrayList<MarketTr
 		String info ="";
 		//System.out.println(authenticatedHTTPRequest("getInfo", arguments));
 		try {
-			  info = apacheHttpPost(_urlApi,arguments, "getInfo",marketTraders.get(0).getKey(),marketTraders.get(0).getSecret());
-			//System.out.println(info);
+			  info = apacheHttpPost(_urlApi,arguments, "getInfo",marketTraders.get(0).getKey(),marketTraders.get(0).getSecret(),marketTraders.get(0).getCurrent_nonce());
+			System.out.println(info);
 			// get the parsing success or not
 			resources = parseResources(info,keyMapping);
 			//System.out.println(resources);
@@ -325,7 +273,7 @@ private static ArrayList<MarketTraderKey> marketTraders = new ArrayList<MarketTr
 		
 		//System.out.println(authenticatedHTTPRequest("getInfo", arguments));
 		try {
-			String info = apacheHttpPost(_urlApi,arguments, "getInfo",marketTraders.get(0).getKey(),marketTraders.get(0).getSecret());
+			String info = apacheHttpPost(_urlApi,arguments, "getInfo",marketTraders.get(0).getKey(),marketTraders.get(0).getSecret(),marketTraders.get(0).getCurrent_nonce());
 			//System.out.println(info);
 			// get the parsing success or not
 			resources = parseResources(info,keyMapping);
@@ -411,11 +359,11 @@ private static ArrayList<MarketTraderKey> marketTraders = new ArrayList<MarketTr
 	}
 	
 	
-	public String apacheHttpPost(String url,Map<String, String> arguments, String method,String _key, String _secret) throws Exception{
+	public String apacheHttpPost(String url,Map<String, String> arguments, String method,String _key, String _secret, long nonce) throws Exception{
 		
 
-		
-		_nonce = System.currentTimeMillis() % 1000000000;
+		final long timeFreeze = 1301893451L;
+		_nonce =  nonce;
 		
 		BufferedReader reader;
 		String currentLine;

@@ -36,7 +36,7 @@ public class MarketJsonConnector {
 
 	
     ObjectMapper objectMapper = null;
-	int maxNumberOfOrders = 15;
+	int maxNumberOfOrders = 50;
 	final Market [] markets;
 	
 	// start end in long 

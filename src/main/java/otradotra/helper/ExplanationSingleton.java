@@ -32,12 +32,9 @@ public class ExplanationSingleton {
 			
 			String currency = ma.orders.get(0).getMarket().getTo();
 			buff.append(currency+" : ");
-			double sum = 0;
-			for(int j =0;j<ma.orders.size();j++){
-				MarketOrderToSend order = ma.orders.get(0);
-				sum += order.getAmount();
-			}
-			buff.append(sum + " \n");
+			
+			
+			buff.append(ma.totalValueBy + "  ("+ma.amount +")" +  " \n" );
 
 		}
 		

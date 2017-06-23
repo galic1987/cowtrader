@@ -13,27 +13,29 @@ public class MarketOrderToSend {
 	private double amount; // volume
 	
 	private double total = 0; // actual amount for BTC
-
+	private double feeOnAmount = 0;
+	
+	
 	// not to be send
 	private Market market; // realMarketData
 	private int orderDepth;
 	
 	
-	public double recalculate() {
-		double tempBuy = 0;
-		if (market.type == MarketType.BID) {
-			// bid
-			tempBuy = (amount * rate)
-					- ((amount * rate) * market.getTransactionFee());
-		} else {
-			// ask
-			tempBuy = (amount / rate)
-					- ((amount / rate) * market.getTransactionFee());
-		}
-
-		setTotal(tempBuy);
-		return tempBuy;
-	}
+//	public double recalculate() {
+//		double tempBuy = 0;
+//		if (market.type == MarketType.BID) {
+//			// bid
+//			tempBuy = (amount * rate);
+////					- ((amount * rate) * market.getTransactionFee());
+//		} else {
+//			// ask
+//			tempBuy = (amount / rate);
+////					- ((amount / rate) * market.getTransactionFee());
+//		}
+//
+//		setTotal(tempBuy);
+//		return tempBuy;
+//	}
 	
 	public String getPair() {
 		return pair;
@@ -78,5 +80,13 @@ public class MarketOrderToSend {
 
 	public void setTotal(double total) {
 		this.total = total;
+	}
+
+	public double getFeeOnAmount() {
+		return feeOnAmount;
+	}
+
+	public void setFeeOnAmount(double feeOnAmount) {
+		this.feeOnAmount = feeOnAmount;
 	}
 }
